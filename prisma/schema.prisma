@@ -1,0 +1,182 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")       // connection pooling (usada em runtime)
+  directUrl = env("DIRECT_URL")         // conexão direta (usada só pelas migrations)
+}
+
+// ==========================================
+// ENUMS
+// ==========================================
+
+enum Role {
+  ADMIN
+  KITCHEN
+  ATTENDANT
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  IN_PREPARATION
+  READY
+  OUT_FOR_DELIVERY
+  DELIVERED
+  CANCELED
+}
+
+enum PaymentMethod {
+  PIX
+  CREDIT_CARD
+  DEBIT_CARD
+  CASH
+}
+
+enum ProductType {
+  SIMPLE
+  PIZZA
+}
+
+// ==========================================
+// AUTENTICAÇÃO (NextAuth)
+// ==========================================
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      Role     @default(ATTENDANT)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orders    Order[]
+
+  @@map("users")
+}
+
+// ==========================================
+// CARDÁPIO (CMS)
+// ==========================================
+
+model Category {
+  id       String  @id @default(cuid())
+  name     String
+  slug     String  @unique
+  order    Int     @default(0)
+  isActive Boolean @default(true)
+
+  products Product[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("categories")
+}
+
+model Product {
+  id               String      @id @default(cuid())
+  title            String
+  description      String      @db.Text
+  imageUrl         String
+  type             ProductType @default(SIMPLE)
+
+  servesInfo       String?
+
+  originalPrice    Decimal     @db.Decimal(10, 2)
+  promoPrice       Decimal?    @db.Decimal(10, 2)
+  isPromoActive    Boolean     @default(false)
+
+  isAvailable      Boolean     @default(true)
+  isFlavorEligible Boolean     @default(false)
+
+  categoryId       String
+  category         Category    @relation(fields: [categoryId], references: [id])
+
+  orderItems       OrderItem[]
+  flavorOne        PizzaFlavorCombination[] @relation("FlavorOne")
+  flavorTwo        PizzaFlavorCombination[] @relation("FlavorTwo")
+
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  @@index([categoryId])
+  @@map("products")
+}
+
+// ==========================================
+// LÓGICA DE PIZZA 2 SABORES
+// ==========================================
+
+model PizzaFlavorCombination {
+  id          String    @id @default(cuid())
+
+  orderItemId String    @unique
+  orderItem   OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+
+  flavorOneId String
+  flavorOne   Product   @relation("FlavorOne", fields: [flavorOneId], references: [id])
+
+  flavorTwoId String?
+  flavorTwo   Product?  @relation("FlavorTwo", fields: [flavorTwoId], references: [id])
+
+  @@map("pizza_flavor_combinations")
+}
+
+// ==========================================
+// PEDIDOS
+// ==========================================
+
+model Order {
+  id                String        @id @default(cuid())
+  code              String        @unique
+
+  customerName      String
+  customerPhone     String
+  deliveryAddress   String        @db.Text
+  addressComplement String?
+
+  status            OrderStatus   @default(PENDING)
+  paymentMethod     PaymentMethod
+
+  subtotal          Decimal       @db.Decimal(10, 2)
+  deliveryFee       Decimal       @default(0) @db.Decimal(10, 2)
+  total             Decimal       @db.Decimal(10, 2)
+
+  notes             String?       @db.Text
+
+  attendantId       String?
+  attendant         User?         @relation(fields: [attendantId], references: [id])
+
+  items             OrderItem[]
+
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  @@index([status])
+  @@index([createdAt])
+  @@map("orders")
+}
+
+model OrderItem {
+  id          String  @id @default(cuid())
+
+  orderId     String
+  order       Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  productId   String
+  product     Product @relation(fields: [productId], references: [id])
+
+  quantity    Int     @default(1)
+  unitPrice   Decimal @db.Decimal(10, 2)
+  totalPrice  Decimal @db.Decimal(10, 2)
+
+  observation String?
+
+  pizzaCombination PizzaFlavorCombination?
+
+  @@map("order_items")
+}

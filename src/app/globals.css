@@ -1,0 +1,96 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* ==========================================
+   COMANDA DE COZINHA — IMPRESSÃO TÉRMICA 80mm
+   ========================================== */
+
+.ticket-container {
+  width: 80mm;
+  padding: 4mm;
+  font-family: "Courier New", monospace;
+  color: #000;
+  background: #fff;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.ticket-title {
+  font-size: 16px;
+  font-weight: bold;
+  text-align: center;
+  margin: 0;
+}
+
+.ticket-subtitle {
+  font-size: 10px;
+  text-align: center;
+  margin: 0 0 4px 0;
+}
+
+.ticket-divider {
+  border-top: 1px dashed #000;
+  margin: 6px 0;
+}
+
+.ticket-line {
+  margin: 2px 0;
+}
+
+.ticket-item {
+  margin: 4px 0;
+}
+
+.ticket-item-qty {
+  font-weight: bold;
+  margin: 0;
+}
+
+.ticket-item-detail,
+.ticket-item-obs {
+  margin: 0 0 0 8px;
+  font-size: 10px;
+}
+
+.ticket-total {
+  font-size: 14px;
+  font-weight: bold;
+  text-align: right;
+  margin-top: 6px;
+}
+
+.ticket-footer {
+  text-align: center;
+  font-size: 9px;
+  margin-top: 8px;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  .ticket-container,
+  .ticket-container * {
+    visibility: visible;
+  }
+
+  .ticket-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 80mm;
+  }
+
+  @page {
+    size: 80mm auto;
+    margin: 0;
+  }
+}
