@@ -213,6 +213,18 @@ model OrderItem {
   observation String?
 
   pizzaCombination PizzaFlavorCombination?
+  addons           OrderItemAddon[]
 
   @@map("order_items")
+}
+
+model OrderItemAddon {
+  id          String    @id @default(cuid())
+  name        String
+  price       Decimal   @db.Decimal(10, 2)
+  
+  orderItemId String
+  orderItem   OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+
+  @@map("order_item_addons")
 }

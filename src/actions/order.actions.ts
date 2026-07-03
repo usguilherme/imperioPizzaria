@@ -23,28 +23,29 @@ export async function createOrderAction(checkoutData: CheckoutData, cartItems: C
 
     const processedItems = await Promise.all(
       cartItems.map(async (item) => {
-        let finalUnitPrice = 0;
+        let basePrice = 0;
 
         if (item.sizeId) {
           const size = await prisma.pizzaSize.findUnique({ where: { id: item.sizeId } });
           if (!size) throw new Error("Tamanho de pizza inválido");
-          finalUnitPrice = Number(size.price);
+          basePrice = Number(size.price);
         } else {
           const product = await prisma.product.findUnique({ where: { id: item.productId } });
           if (!product) throw new Error("Produto inválido");
-          finalUnitPrice = Number(product.promoPrice || product.originalPrice);
+          basePrice = Number(product.promoPrice || product.originalPrice);
         }
 
+        const addonsPrice = item.selectedAddons?.reduce((acc, a) => acc + a.price, 0) || 0;
+        const finalUnitPrice = basePrice + addonsPrice;
         const itemTotal = finalUnitPrice * item.quantity;
+        
         subtotal += itemTotal;
 
         return {
-          productId: item.productId,
-          quantity: item.quantity,
+          ...item,
           unitPrice: finalUnitPrice,
           totalPrice: itemTotal,
-          sizeId: item.sizeId,
-          flavors: item.flavors,
+          addonsPrice,
         };
       })
     );
@@ -79,17 +80,31 @@ export async function createOrderAction(checkoutData: CheckoutData, cartItems: C
           },
         });
 
+        if (item.selectedAddons && item.selectedAddons.length > 0) {
+          for (const addon of item.selectedAddons) {
+            await tx.orderItemAddon.create({
+              data: {
+                orderItemId: orderItem.id,
+                name: addon.name,
+                price: addon.price
+              }
+            });
+          }
+        }
+
+        // Lógica de sabores de pizza com tipagem blindada
         if (item.sizeId && item.flavors && item.flavors.length > 0) {
           const flavorOne = item.flavors[0];
           const flavorTwo = item.flavors[1];
-
-          if (flavorOne) {
+          
+          // Checagem explícita para o TypeScript entender que o objeto e o ID existem
+          if (flavorOne && flavorOne.id) {
             await tx.pizzaFlavorCombination.create({
               data: {
                 orderItemId: orderItem.id,
                 sizeId: item.sizeId,
                 flavorOneId: flavorOne.id,
-                flavorTwoId: flavorTwo ? flavorTwo.id : null,
+                flavorTwoId: (flavorTwo && flavorTwo.id) ? flavorTwo.id : null,
               },
             });
           }
@@ -106,35 +121,13 @@ export async function createOrderAction(checkoutData: CheckoutData, cartItems: C
 }
 
 export async function updateOrderStatusAction(orderId: string, status: OrderStatus) {
-  try {
-    await prisma.order.update({
-      where: { id: orderId },
-      data: { status },
-    });
-
-    revalidatePath("/admin/pedidos"); 
-    revalidatePath("/admin"); 
-
-    return { success: true };
-  } catch (error) {
-    console.error("Erro ao atualizar status do pedido:", error);
-    return { success: false, error: "Falha ao atualizar status." };
-  }
+  await prisma.order.update({ where: { id: orderId }, data: { status } });
+  revalidatePath("/admin/pedidos");
+  return { success: true };
 }
 
-// NOVA FUNÇÃO PARA EXCLUIR PEDIDO
 export async function deleteOrderAction(orderId: string) {
-  try {
-    await prisma.order.delete({
-      where: { id: orderId },
-    });
-
-    revalidatePath("/admin/pedidos");
-    revalidatePath("/admin");
-
-    return { success: true };
-  } catch (error) {
-    console.error("Erro ao excluir pedido:", error);
-    return { success: false, error: "Falha ao excluir pedido." };
-  }
+  await prisma.order.delete({ where: { id: orderId } });
+  revalidatePath("/admin/pedidos");
+  return { success: true };
 }

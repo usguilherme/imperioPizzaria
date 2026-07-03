@@ -6,8 +6,13 @@ export interface CartFlavor {
   name: string;
 }
 
+export interface CartAddon {
+  name: string;
+  price: number;
+}
+
 export interface CartItem {
-  id: string; // ID único gerado no front (crypto.randomUUID)
+  id: string; 
   productId: string;
   name: string;
   price: number;
@@ -17,7 +22,10 @@ export interface CartItem {
   // Dados específicos para Pizzas
   sizeId?: string;
   sizeName?: string;
-  flavors?: CartFlavor[]; // Array com 1 ou 2 sabores escolhidos
+  flavors?: CartFlavor[];
+  
+  // Adicionais
+  selectedAddons?: CartAddon[];
 }
 
 interface CartStore {
@@ -35,8 +43,8 @@ export const useCartStore = create<CartStore>()(
       
       addItem: (item) =>
         set((state) => {
-          // Se for um produto simples (sem tamanho), tenta agrupar
-          if (!item.sizeId) {
+          // Itens com adicionais ou tamanhos específicos não são agrupados
+          if (!item.sizeId && (!item.selectedAddons || item.selectedAddons.length === 0)) {
             const existingItem = state.items.find((i) => i.productId === item.productId);
             if (existingItem) {
               return {
@@ -48,7 +56,6 @@ export const useCartStore = create<CartStore>()(
               };
             }
           }
-          // Se for pizza (tem tamanho e sabores), adiciona como um item único sempre
           return { items: [...state.items, item] };
         }),
 
