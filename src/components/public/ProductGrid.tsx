@@ -6,12 +6,11 @@ import { PizzaBuilderModal } from "./PizzaBuilderModal";
 
 interface ProductGridProps {
   products: Omit<ProductCardProps, "onConfigurePizza">[];
-  // O tipo foi declarado direto aqui, já que removemos do modal
-  flavorOptions: { id: string; title: string }[];
+  // Tipagem atualizada para receber os dados completos que vêm do page.tsx
+  flavorOptions: { id: string; title: string; imageUrl: string; price: number }[];
 }
 
 export function ProductGrid({ products, flavorOptions }: ProductGridProps) {
-  // Em vez de só um boolean, guardamos a pizza exata que o cliente clicou
   const [selectedPizza, setSelectedPizza] = useState<Omit<ProductCardProps, "onConfigurePizza"> | null>(null);
 
   return (
@@ -21,13 +20,11 @@ export function ProductGrid({ products, flavorOptions }: ProductGridProps) {
           <ProductCard
             key={product.id}
             {...product}
-            // Quando clica em montar, salva o produto no state
             onConfigurePizza={() => setSelectedPizza(product)}
           />
         ))}
       </div>
 
-      {/* Renderiza o modal apenas se existir uma pizza selecionada */}
       {selectedPizza && (
         <PizzaBuilderModal
           product={{

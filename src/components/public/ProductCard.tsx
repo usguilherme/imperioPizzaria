@@ -40,14 +40,14 @@ export function ProductCard({
 
   const handleAction = () => {
     if (isPizza) {
-      onConfigurePizza?.(id);
+      if (onConfigurePizza) onConfigurePizza(id);
       return;
     }
     addItem({
       id: crypto.randomUUID(),
       productId: id,
-      name: title,        // Aqui você mapeia o 'title' do card para o 'name' do carrinho
-      price: finalPrice,  // Mude 'unitPrice' para 'price'
+      name: title,
+      price: finalPrice,
       quantity: 1,
       imageUrl: imageUrl,
     });
