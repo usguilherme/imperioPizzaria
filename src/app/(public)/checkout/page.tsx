@@ -13,7 +13,6 @@ export default function CheckoutPage() {
   const router = useRouter();
   const { items, clearCart } = useCartStore();
   
-  // Cálculo do subtotal atualizado para o formato numérico
   const subtotal = items.reduce((total, item) => total + (item.price * item.quantity), 0);
   const total = subtotal + DELIVERY_FEE;
 
@@ -39,13 +38,12 @@ export default function CheckoutPage() {
     }
 
     startTransition(async () => {
-      // Enviando para a action conforme a nova estrutura do carrinho
       const result = await createOrderAction(
         {
           ...form,
           deliveryFee: DELIVERY_FEE,
         },
-        items // Passamos os itens direto, a action já sabe lidar com sizeId/flavors
+        items 
       );
 
       if (!result.success) {
@@ -53,6 +51,52 @@ export default function CheckoutPage() {
         return;
       }
 
+      // ==========================================
+      // LÓGICA DE MENSAGEM PARA O WHATSAPP
+      // ==========================================
+      const paymentMap = {
+        PIX: "Pix",
+        CREDIT_CARD: "Cartão de Crédito",
+        DEBIT_CARD: "Cartão de Débito",
+        CASH: "Dinheiro",
+      };
+
+      let message = `*NOVO PEDIDO!* 🛵\n\n`;
+      message += `*Cliente:* ${form.customerName}\n`;
+      message += `*Telefone:* ${form.customerPhone}\n`;
+      message += `*Endereço:* ${form.deliveryAddress}${form.addressComplement ? `, ${form.addressComplement}` : ''}\n`;
+      message += `*Pagamento:* ${paymentMap[form.paymentMethod]}\n\n`;
+
+      message += `*PEDIDO:*\n`;
+      items.forEach((item) => {
+        message += `• ${item.quantity}x ${item.name} - ${formatCurrency(item.price * item.quantity)}\n`;
+        
+        if (item.flavors && item.flavors.length > 0) {
+          message += `   Sabores: ${item.flavors.map(f => f.name).join(" e ")}\n`;
+        }
+        
+        if (item.selectedAddons && item.selectedAddons.length > 0) {
+          message += `   Adicionais: ${item.selectedAddons.map(a => a.name).join(", ")}\n`;
+        }
+      });
+
+      message += `\n*Subtotal:* ${formatCurrency(subtotal)}\n`;
+      message += `*Taxa de entrega:* ${formatCurrency(DELIVERY_FEE)}\n`;
+      message += `*TOTAL:* ${formatCurrency(total)}\n`;
+
+      if (form.notes) {
+        message += `\n*Observações:* ${form.notes}`;
+      }
+
+      // O número de destino configurado (83 988738301)
+      const targetPhone = "5583988738301";
+      const encodedMessage = encodeURIComponent(message);
+      const whatsappUrl = `https://wa.me/${targetPhone}?text=${encodedMessage}`;
+
+      // Abre o WhatsApp em uma nova aba
+      window.open(whatsappUrl, '_blank');
+
+      // Limpa o carrinho e redireciona para a página de sucesso
       clearCart();
       router.push(`/pedido-confirmado?code=${result.code}`);
     });
