@@ -10,15 +10,16 @@ import {
   Printer,
   LogOut,
   Crown,
-  LayoutGrid, // <-- Ícone novo importado aqui
+  LayoutGrid,
+  Scale, // Ícone para tamanhos
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// <-- Rota de categorias adicionada no array abaixo
 const NAV_ITEMS = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/produtos", label: "Cardápio", icon: UtensilsCrossed },
-  { href: "/admin/categorias", label: "Categorias", icon: LayoutGrid }, 
+  { href: "/admin/categorias", label: "Categorias", icon: LayoutGrid },
+  { href: "/admin/tamanhos", label: "Tamanhos", icon: Scale }, // Nova rota adicionada
   { href: "/admin/pedidos", label: "Pedidos", icon: ClipboardList },
   { href: "/admin/cozinha", label: "Cozinha", icon: Printer },
 ];
