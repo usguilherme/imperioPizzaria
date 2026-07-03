@@ -1,16 +1,15 @@
 export const dynamic = "force-dynamic";
 
 import Link from "next/link";
-import { Plus, Edit2 } from "lucide-react";
+import { Plus, Edit2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
-// Importação direta do cliente do Prisma
 import { PrismaClient } from "@prisma/client";
+import { deleteCategoryAction } from "@/actions/category.actions";
 
 const prisma = new PrismaClient();
 
 export default async function CategoriasPage() {
-  // Busca as categorias ordenadas pelo campo "order"
   const categorias = await prisma.category.findMany({
     orderBy: { order: "asc" },
   });
@@ -20,14 +19,11 @@ export default async function CategoriasPage() {
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="font-display text-2xl font-bold text-foreground">Categorias</h1>
-          <p className="text-sm text-foreground-subtle">
-            Gerencie as categorias do seu cardápio.
-          </p>
+          <p className="text-sm text-foreground-subtle">Gerencie as categorias do seu cardápio.</p>
         </div>
         <Link href="/admin/categorias/nova">
           <Button className="gap-2">
-            <Plus size={18} />
-            Nova Categoria
+            <Plus size={18} /> Nova Categoria
           </Button>
         </Link>
       </div>
@@ -64,11 +60,29 @@ export default async function CategoriasPage() {
                     )}
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <Link href={`/admin/categorias/${categoria.id}`}>
-                      <Button variant="ghost" size="sm" className="h-8 w-8 px-0">
-                        <Edit2 size={16} />
-                      </Button>
-                    </Link>
+                    <div className="flex justify-end gap-2">
+                      <Link href={`/admin/categorias/${categoria.id}`}>
+                        <Button variant="ghost" size="sm" className="h-8 w-8 px-0">
+                          <Edit2 size={16} />
+                        </Button>
+                      </Link>
+
+                      <form
+                        action={async () => {
+                          "use server";
+                          await deleteCategoryAction(categoria.id);
+                        }}
+                      >
+                        <Button
+                          type="submit"
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 px-0 text-red-500 hover:text-red-600"
+                        >
+                          <Trash2 size={16} />
+                        </Button>
+                      </form>
+                    </div>
                   </td>
                 </tr>
               ))
