@@ -2,8 +2,9 @@
 
 import { OrderStatus } from "@prisma/client";
 import { formatCurrency, formatDateTime } from "@/lib/utils";
-import { updateOrderStatusAction } from "@/actions/order.actions";
+import { updateOrderStatusAction, deleteOrderAction } from "@/actions/order.actions";
 import { useTransition } from "react";
+import { Trash2 } from "lucide-react";
 
 export interface KanbanOrder {
   id: string;
@@ -37,6 +38,13 @@ export function OrderKanbanColumn({
     if (!nextStatus) return;
     startTransition(() => {
       updateOrderStatusAction(orderId, nextStatus);
+    });
+  };
+
+  const handleDelete = (orderId: string) => {
+    if (!confirm("Tem certeza que deseja cancelar este pedido?")) return;
+    startTransition(() => {
+      deleteOrderAction(orderId);
     });
   };
 
@@ -78,15 +86,25 @@ export function OrderKanbanColumn({
               {formatCurrency(order.total)}
             </p>
 
-            {nextStatus && (
+            <div className="flex gap-2">
+              {nextStatus && (
+                <button
+                  onClick={() => handleAdvance(order.id)}
+                  disabled={isPending}
+                  className="flex-1 rounded-md bg-primary/15 py-1.5 text-xs font-semibold text-primary transition-colors hover:bg-primary/25 disabled:opacity-50"
+                >
+                  {nextLabel}
+                </button>
+              )}
+              
               <button
-                onClick={() => handleAdvance(order.id)}
+                onClick={() => handleDelete(order.id)}
                 disabled={isPending}
-                className="w-full rounded-md bg-primary/15 py-1.5 text-xs font-semibold text-primary transition-colors hover:bg-primary/25 disabled:opacity-50"
+                className="flex items-center justify-center rounded-md bg-red-500/10 px-2 py-1.5 text-red-500 transition-colors hover:bg-red-500/20 disabled:opacity-50"
               >
-                {nextLabel}
+                <Trash2 size={16} />
               </button>
-            )}
+            </div>
           </div>
         ))}
 

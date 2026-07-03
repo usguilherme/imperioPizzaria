@@ -18,22 +18,18 @@ interface CheckoutData {
 
 export async function createOrderAction(checkoutData: CheckoutData, cartItems: CartItem[]) {
   try {
-    // 1. Validar e recalcular preços pelo servidor
     let subtotal = 0;
-    // Removida a constante local para usar o valor que vem do checkoutData
     const deliveryFee = checkoutData.deliveryFee; 
 
     const processedItems = await Promise.all(
       cartItems.map(async (item) => {
         let finalUnitPrice = 0;
 
-        // Se for pizza, o preço base vem da tabela de Tamanhos
         if (item.sizeId) {
           const size = await prisma.pizzaSize.findUnique({ where: { id: item.sizeId } });
           if (!size) throw new Error("Tamanho de pizza inválido");
           finalUnitPrice = Number(size.price);
         } else {
-          // Se for produto comum, pega o preço da tabela de Produtos
           const product = await prisma.product.findUnique({ where: { id: item.productId } });
           if (!product) throw new Error("Produto inválido");
           finalUnitPrice = Number(product.promoPrice || product.originalPrice);
@@ -54,11 +50,8 @@ export async function createOrderAction(checkoutData: CheckoutData, cartItems: C
     );
 
     const total = subtotal + deliveryFee;
-
-    // 2. Gerar código único para o pedido
     const orderCode = `PED-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
 
-    // 3. Salvar no banco usando transação
     const order = await prisma.$transaction(async (tx) => {
       const newOrder = await tx.order.create({
         data: {
@@ -75,7 +68,6 @@ export async function createOrderAction(checkoutData: CheckoutData, cartItems: C
         },
       });
 
-      // Cria os itens e suas combinações de sabores
       for (const item of processedItems) {
         const orderItem = await tx.orderItem.create({
           data: {
@@ -103,12 +95,10 @@ export async function createOrderAction(checkoutData: CheckoutData, cartItems: C
           }
         }
       }
-
       return newOrder;
     });
 
     return { success: true, orderId: order.id, code: order.code };
-    
   } catch (error) {
     console.error("Erro ao processar pedido:", error);
     return { success: false, error: "Falha ao finalizar pedido." };
@@ -129,5 +119,22 @@ export async function updateOrderStatusAction(orderId: string, status: OrderStat
   } catch (error) {
     console.error("Erro ao atualizar status do pedido:", error);
     return { success: false, error: "Falha ao atualizar status." };
+  }
+}
+
+// NOVA FUNÇÃO PARA EXCLUIR PEDIDO
+export async function deleteOrderAction(orderId: string) {
+  try {
+    await prisma.order.delete({
+      where: { id: orderId },
+    });
+
+    revalidatePath("/admin/pedidos");
+    revalidatePath("/admin");
+
+    return { success: true };
+  } catch (error) {
+    console.error("Erro ao excluir pedido:", error);
+    return { success: false, error: "Falha ao excluir pedido." };
   }
 }

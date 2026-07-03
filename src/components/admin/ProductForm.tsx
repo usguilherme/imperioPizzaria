@@ -6,6 +6,7 @@ import Image from "next/image";
 import { createProductAction, updateProductAction } from "@/actions/product.actions";
 import { Button } from "@/components/ui/Button";
 import { ProductSchemaInput } from "@/modules/product/application/validators/product.schema";
+import { Trash2, Plus } from "lucide-react";
 
 interface CategoryOption {
   id: string;
@@ -17,10 +18,16 @@ interface SizeOption {
   name: string;
 }
 
+type Addon = { name: string; price: number };
+
 interface ProductFormProps {
   categories: CategoryOption[];
   availableSizes: SizeOption[];
-  initialData?: ProductSchemaInput & { id: string; availableSizes?: { id: string }[] };
+  initialData?: ProductSchemaInput & { 
+    id: string; 
+    availableSizes?: { id: string }[];
+    addons?: Addon[];
+  };
 }
 
 const MAX_IMAGE_SIZE_MB = 3;
@@ -40,7 +47,7 @@ export function ProductForm({ categories, availableSizes, initialData }: Product
   const [error, setError] = useState<string | null>(null);
   const [isProcessingImage, setIsProcessingImage] = useState(false);
 
-  const [form, setForm] = useState<ProductSchemaInput & { availableSizeIds: string[] }>({
+  const [form, setForm] = useState({
     title: initialData?.title ?? "",
     description: initialData?.description ?? "",
     imageUrl: initialData?.imageUrl ?? "",
@@ -52,7 +59,33 @@ export function ProductForm({ categories, availableSizes, initialData }: Product
     isFlavorEligible: initialData?.isFlavorEligible ?? false,
     categoryId: initialData?.categoryId ?? categories[0]?.id ?? "",
     availableSizeIds: initialData?.availableSizes?.map(s => s.id) ?? [],
+    addons: (initialData?.addons ?? []) as Addon[]
   });
+
+  const addAddon = () => {
+    setForm((prev) => ({ 
+      ...prev, 
+      addons: [...prev.addons, { name: "", price: 0 }] 
+    }));
+  };
+  
+  const removeAddon = (index: number) => {
+    setForm((prev) => ({ 
+      ...prev, 
+      addons: prev.addons.filter((_, i) => i !== index) 
+    }));
+  };
+
+  const updateAddon = (index: number, field: 'name' | 'price', value: string | number) => {
+    setForm((prev) => {
+      const newAddons = [...prev.addons];
+      newAddons[index] = { 
+        ...newAddons[index], 
+        [field]: value 
+      } as Addon;
+      return { ...prev, addons: newAddons };
+    });
+  };
 
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -91,8 +124,8 @@ export function ProductForm({ categories, availableSizes, initialData }: Product
 
     startTransition(async () => {
       const result = initialData
-        ? await updateProductAction(initialData.id, form)
-        : await createProductAction(form);
+        ? await updateProductAction(initialData.id, form as any)
+        : await createProductAction(form as any);
 
       if (!result.success) {
         setError(result.error ?? "Erro ao salvar produto");
@@ -175,34 +208,55 @@ export function ProductForm({ categories, availableSizes, initialData }: Product
         </div>
       </div>
 
-      {/* Seção de Tamanhos Opcionais */}
       <div className="space-y-2">
         <label className="block text-sm font-medium text-foreground-muted">Tamanhos Disponíveis</label>
         <div className="flex flex-wrap gap-4 rounded-lg border border-border p-3">
-          {availableSizes.length === 0 ? (
-            <p className="text-xs text-foreground-muted italic">Nenhum tamanho cadastrado.</p>
-          ) : (
-            availableSizes.map((size) => (
-              <label key={size.id} className="flex items-center gap-2 text-sm text-foreground">
-                <input
-                  type="checkbox"
-                  className="accent-primary"
-                  checked={form.availableSizeIds.includes(size.id)}
-                  onChange={(e) => {
-                    const newIds = e.target.checked
-                      ? [...form.availableSizeIds, size.id]
-                      : form.availableSizeIds.filter((id) => id !== size.id);
-                    setForm({ ...form, availableSizeIds: newIds });
-                  }}
-                />
-                {size.name}
-              </label>
-            ))
-          )}
+          {availableSizes.map((size) => (
+            <label key={size.id} className="flex items-center gap-2 text-sm text-foreground">
+              <input
+                type="checkbox"
+                className="accent-primary"
+                checked={form.availableSizeIds.includes(size.id)}
+                onChange={(e) => {
+                  const newIds = e.target.checked
+                    ? [...form.availableSizeIds, size.id]
+                    : form.availableSizeIds.filter((id) => id !== size.id);
+                  setForm({ ...form, availableSizeIds: newIds });
+                }}
+              />
+              {size.name}
+            </label>
+          ))}
         </div>
-        <p className="text-xs text-foreground-subtle">
-          * Deixe vazio para permitir todos os tamanhos cadastrados.
-        </p>
+      </div>
+
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <label className="block text-sm font-medium text-foreground-muted">Adicionais</label>
+          <Button type="button" variant="ghost" size="sm" onClick={addAddon} className="gap-1">
+            <Plus size={14} /> Novo
+          </Button>
+        </div>
+        {form.addons.map((addon, index) => (
+          <div key={index} className="flex gap-2">
+            <input 
+              placeholder="Nome (ex: Bacon)" 
+              value={addon.name} 
+              onChange={(e) => updateAddon(index, 'name', e.target.value)}
+              className="flex-1 rounded-lg border border-border bg-background-surface px-3 py-2 text-sm"
+            />
+            <input 
+              type="number" 
+              placeholder="Preço" 
+              value={addon.price} 
+              onChange={(e) => updateAddon(index, 'price', Number(e.target.value))}
+              className="w-24 rounded-lg border border-border bg-background-surface px-3 py-2 text-sm"
+            />
+            <Button type="button" variant="ghost" className="text-red-500" onClick={() => removeAddon(index)}>
+              <Trash2 size={16} />
+            </Button>
+          </div>
+        ))}
       </div>
 
       <div className="grid grid-cols-2 gap-4">
@@ -240,7 +294,6 @@ export function ProductForm({ categories, availableSizes, initialData }: Product
           />
           Promoção ativa
         </label>
-
         <label className="flex items-center gap-2 text-sm text-foreground-muted">
           <input
             type="checkbox"
