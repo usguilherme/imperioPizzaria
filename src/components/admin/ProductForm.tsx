@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { createProductAction, updateProductAction } from "@/actions/product.actions";
 import { Button } from "@/components/ui/Button";
 import { ProductSchemaInput } from "@/modules/product/application/validators/product.schema";
@@ -16,10 +17,23 @@ interface ProductFormProps {
   initialData?: ProductSchemaInput & { id: string };
 }
 
+const MAX_IMAGE_SIZE_MB = 3;
+
+/** Converte o arquivo escolhido pelo usuário em uma data URL (base64), salva direto no campo imageUrl. */
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 export function ProductForm({ categories, initialData }: ProductFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [isProcessingImage, setIsProcessingImage] = useState(false);
 
   const [form, setForm] = useState<ProductSchemaInput>({
     title: initialData?.title ?? "",
@@ -34,9 +48,40 @@ export function ProductForm({ categories, initialData }: ProductFormProps) {
     categoryId: initialData?.categoryId ?? categories[0]?.id ?? "",
   });
 
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setError("Selecione um arquivo de imagem válido (jpg, png, webp...)");
+      return;
+    }
+
+    if (file.size > MAX_IMAGE_SIZE_MB * 1024 * 1024) {
+      setError(`A imagem deve ter no máximo ${MAX_IMAGE_SIZE_MB}MB`);
+      return;
+    }
+
+    setError(null);
+    setIsProcessingImage(true);
+    try {
+      const base64 = await fileToBase64(file);
+      setForm((prev) => ({ ...prev, imageUrl: base64 }));
+    } catch {
+      setError("Não foi possível carregar essa imagem, tente outro arquivo");
+    } finally {
+      setIsProcessingImage(false);
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    if (!form.imageUrl) {
+      setError("Selecione uma imagem para o produto");
+      return;
+    }
 
     startTransition(async () => {
       const result = initialData
@@ -83,14 +128,29 @@ export function ProductForm({ categories, initialData }: ProductFormProps) {
       </div>
 
       <div>
-        <label className="mb-1 block text-sm font-medium text-foreground-muted">URL da Imagem</label>
+        <label className="mb-1 block text-sm font-medium text-foreground-muted">
+          Foto do produto
+        </label>
+
+        {form.imageUrl && (
+          <div className="relative mb-3 h-40 w-40 overflow-hidden rounded-lg border border-border bg-background-elevated">
+            <Image src={form.imageUrl} alt="Prévia da imagem" fill className="object-cover" unoptimized />
+          </div>
+        )}
+
         <input
-          value={form.imageUrl}
-          onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
-          className="w-full rounded-lg border border-border bg-background-surface px-3 py-2 text-foreground focus:border-primary focus:outline-none"
-          placeholder="https://..."
-          required
+          type="file"
+          accept="image/*"
+          onChange={handleImageChange}
+          className="block w-full text-sm text-foreground-muted file:mr-3 file:rounded-lg file:border-0 file:bg-primary file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-primary-hover"
         />
+
+        {isProcessingImage && (
+          <p className="mt-1 text-xs text-foreground-subtle">Carregando imagem...</p>
+        )}
+        <p className="mt-1 text-xs text-foreground-subtle">
+          Formatos aceitos: JPG, PNG, WEBP. Tamanho máximo: {MAX_IMAGE_SIZE_MB}MB.
+        </p>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
@@ -182,7 +242,7 @@ export function ProductForm({ categories, initialData }: ProductFormProps) {
       </div>
 
       <div className="flex gap-3 pt-2">
-        <Button type="submit" disabled={isPending}>
+        <Button type="submit" disabled={isPending || isProcessingImage}>
           {isPending ? "Salvando..." : "Salvar produto"}
         </Button>
         <Button type="button" variant="secondary" onClick={() => router.back()}>
