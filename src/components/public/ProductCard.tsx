@@ -44,11 +44,12 @@ export function ProductCard({
       return;
     }
     addItem({
+      id: crypto.randomUUID(),
       productId: id,
-      title,
-      imageUrl,
-      unitPrice: finalPrice,
+      name: title,        // Aqui você mapeia o 'title' do card para o 'name' do carrinho
+      price: finalPrice,  // Mude 'unitPrice' para 'price'
       quantity: 1,
+      imageUrl: imageUrl,
     });
   };
 

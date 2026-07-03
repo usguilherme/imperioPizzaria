@@ -52,7 +52,14 @@ export async function createOrderUseCase(
       unitPrice,
       totalPrice,
       observation: item.observation ?? null,
-      pizzaFlavors: item.pizzaFlavors ?? null,
+      // CORREÇÃO: Garantindo que o sizeId esteja presente na estrutura esperada pelo repositório
+      pizzaFlavors: item.pizzaFlavors 
+        ? {
+            sizeId: item.pizzaFlavors.sizeId, 
+            flavorOneId: item.pizzaFlavors.flavorOneId,
+            flavorTwoId: item.pizzaFlavors.flavorTwoId ?? null,
+          }
+        : null,
     });
   }
 

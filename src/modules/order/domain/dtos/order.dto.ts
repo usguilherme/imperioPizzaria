@@ -2,8 +2,9 @@ export interface CreateOrderItemInput {
   productId: string;
   quantity: number;
   observation?: string | null;
-  // Preenchido apenas quando o item é uma pizza 2 sabores
+  // Preenchido apenas quando o item é uma pizza
   pizzaFlavors?: {
+    sizeId: string; // Adicionado aqui para permitir o fluxo de dados no UseCase e Repositório
     flavorOneId: string;
     flavorTwoId?: string | null;
   } | null;

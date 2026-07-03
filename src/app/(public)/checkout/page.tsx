@@ -11,7 +11,12 @@ const DELIVERY_FEE = 6.9;
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { items, subtotal, clearCart } = useCartStore();
+  const { items, clearCart } = useCartStore();
+  
+  // Cálculo do subtotal atualizado para o formato numérico
+  const subtotal = items.reduce((total, item) => total + (item.price * item.quantity), 0);
+  const total = subtotal + DELIVERY_FEE;
+
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
@@ -24,8 +29,6 @@ export default function CheckoutPage() {
     notes: "",
   });
 
-  const total = subtotal() + DELIVERY_FEE;
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -36,21 +39,14 @@ export default function CheckoutPage() {
     }
 
     startTransition(async () => {
-      const result = await createOrderAction({
-        ...form,
-        deliveryFee: DELIVERY_FEE,
-        items: items.map((item) => ({
-          productId: item.pizzaFlavors ? item.pizzaFlavors.flavorOneId : item.productId,
-          quantity: item.quantity,
-          observation: item.observation,
-          pizzaFlavors: item.pizzaFlavors
-            ? {
-                flavorOneId: item.pizzaFlavors.flavorOneId,
-                flavorTwoId: item.pizzaFlavors.flavorTwoId,
-              }
-            : null,
-        })),
-      });
+      // Enviando para a action conforme a nova estrutura do carrinho
+      const result = await createOrderAction(
+        {
+          ...form,
+          deliveryFee: DELIVERY_FEE,
+        },
+        items // Passamos os itens direto, a action já sabe lidar com sizeId/flavors
+      );
 
       if (!result.success) {
         setError(result.error ?? "Erro ao finalizar pedido");
@@ -58,7 +54,7 @@ export default function CheckoutPage() {
       }
 
       clearCart();
-      router.push(`/pedido-confirmado?code=${result.data?.code}`);
+      router.push(`/pedido-confirmado?code=${result.code}`);
     });
   };
 
@@ -126,7 +122,7 @@ export default function CheckoutPage() {
         <div className="space-y-1 border-t border-border pt-4">
           <div className="flex justify-between text-sm text-foreground-muted">
             <span>Subtotal</span>
-            <span>{formatCurrency(subtotal())}</span>
+            <span>{formatCurrency(subtotal)}</span>
           </div>
           <div className="flex justify-between text-sm text-foreground-muted">
             <span>Taxa de entrega</span>

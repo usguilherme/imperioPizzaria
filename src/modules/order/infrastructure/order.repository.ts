@@ -8,6 +8,7 @@ interface OrderItemInput {
   totalPrice: number;
   observation?: string | null;
   pizzaFlavors?: {
+    sizeId: string; // Adicionado aqui
     flavorOneId: string;
     flavorTwoId?: string | null;
   } | null;
@@ -30,8 +31,6 @@ interface CreateOrderInput {
 
 export class OrderRepository {
   async create(input: CreateOrderInput) {
-    // Transação: garante atomicidade — se falhar em criar qualquer item,
-    // o pedido inteiro é revertido (equivalente ao @Transactional do Spring).
     return prisma.$transaction(async (tx) => {
       const order = await tx.order.create({
         data: {
@@ -65,6 +64,7 @@ export class OrderRepository {
           await tx.pizzaFlavorCombination.create({
             data: {
               orderItemId: orderItem.id,
+              sizeId: item.pizzaFlavors.sizeId, // Agora o TypeScript reconhece este campo
               flavorOneId: item.pizzaFlavors.flavorOneId,
               flavorTwoId: item.pizzaFlavors.flavorTwoId ?? null,
             },
@@ -84,7 +84,6 @@ export class OrderRepository {
   }
 
   async findByStatusGroup() {
-    // usado pelo Kanban: busca tudo de uma vez e agrupa em memória
     return prisma.order.findMany({
       where: { status: { not: OrderStatus.DELIVERED } },
       include: { items: true },

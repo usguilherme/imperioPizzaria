@@ -1,57 +1,71 @@
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
 
-export interface CartPizzaFlavors {
-  flavorOneId: string;
-  flavorOneTitle: string;
-  flavorTwoId?: string | null;
-  flavorTwoTitle?: string | null;
+export interface CartFlavor {
+  id: string;
+  name: string;
 }
 
 export interface CartItem {
-  cartItemId: string; // id local único (permite 2 pizzas iguais em linhas separadas)
+  id: string; // ID único gerado no front (crypto.randomUUID)
   productId: string;
-  title: string;
-  imageUrl: string;
-  unitPrice: number;
+  name: string;
+  price: number;
   quantity: number;
-  observation?: string | null;
-  pizzaFlavors?: CartPizzaFlavors | null;
+  imageUrl?: string;
+  
+  // Dados específicos para Pizzas
+  sizeId?: string;
+  sizeName?: string;
+  flavors?: CartFlavor[]; // Array com 1 ou 2 sabores escolhidos
 }
 
-interface CartState {
+interface CartStore {
   items: CartItem[];
-  addItem: (item: Omit<CartItem, "cartItemId">) => void;
-  removeItem: (cartItemId: string) => void;
-  updateQuantity: (cartItemId: string, quantity: number) => void;
+  addItem: (item: CartItem) => void;
+  removeItem: (id: string) => void;
+  updateQuantity: (id: string, quantity: number) => void;
   clearCart: () => void;
-  subtotal: () => number;
 }
 
-export const useCartStore = create<CartState>((set, get) => ({
-  items: [],
+export const useCartStore = create<CartStore>()(
+  persist(
+    (set) => ({
+      items: [],
+      
+      addItem: (item) =>
+        set((state) => {
+          // Se for um produto simples (sem tamanho), tenta agrupar
+          if (!item.sizeId) {
+            const existingItem = state.items.find((i) => i.productId === item.productId);
+            if (existingItem) {
+              return {
+                items: state.items.map((i) =>
+                  i.productId === item.productId
+                    ? { ...i, quantity: i.quantity + item.quantity }
+                    : i
+                ),
+              };
+            }
+          }
+          // Se for pizza (tem tamanho e sabores), adiciona como um item único sempre
+          return { items: [...state.items, item] };
+        }),
 
-  addItem: (item) =>
-    set((state) => ({
-      items: [
-        ...state.items,
-        { ...item, cartItemId: crypto.randomUUID() },
-      ],
-    })),
+      removeItem: (id) =>
+        set((state) => ({
+          items: state.items.filter((i) => i.id !== id),
+        })),
 
-  removeItem: (cartItemId) =>
-    set((state) => ({
-      items: state.items.filter((i) => i.cartItemId !== cartItemId),
-    })),
+      updateQuantity: (id, quantity) =>
+        set((state) => ({
+          items: state.items.map((i) => (i.id === id ? { ...i, quantity } : i)),
+        })),
 
-  updateQuantity: (cartItemId, quantity) =>
-    set((state) => ({
-      items: state.items.map((i) =>
-        i.cartItemId === cartItemId ? { ...i, quantity: Math.max(1, quantity) } : i
-      ),
-    })),
-
-  clearCart: () => set({ items: [] }),
-
-  subtotal: () =>
-    get().items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0),
-}));
+      clearCart: () => set({ items: [] }),
+    }),
+    {
+      name: "imperio-cart-storage",
+    }
+  )
+);

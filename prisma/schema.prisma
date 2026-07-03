@@ -108,7 +108,26 @@ model Product {
 }
 
 // ==========================================
-// LÓGICA DE PIZZA 2 SABORES
+// TAMANHOS DE PIZZA
+// ==========================================
+
+model PizzaSize {
+  id          String   @id @default(cuid())
+  name        String
+  price       Decimal  @db.Decimal(10, 2)
+  maxFlavors  Int      @default(2)
+  isActive    Boolean  @default(true)
+
+  pizzaCombinations PizzaFlavorCombination[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("pizza_sizes")
+}
+
+// ==========================================
+// LÓGICA DE PIZZA 2 SABORES E TAMANHOS
 // ==========================================
 
 model PizzaFlavorCombination {
@@ -116,6 +135,9 @@ model PizzaFlavorCombination {
 
   orderItemId String    @unique
   orderItem   OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+
+  sizeId      String
+  size        PizzaSize @relation(fields: [sizeId], references: [id])
 
   flavorOneId String
   flavorOne   Product   @relation("FlavorOne", fields: [flavorOneId], references: [id])

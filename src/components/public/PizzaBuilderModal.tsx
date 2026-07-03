@@ -1,142 +1,187 @@
 "use client";
 
-import { useState } from "react";
-import Image from "next/image";
+import { useState, useEffect } from "react";
 import { X, Check } from "lucide-react";
-import { formatCurrency, cn } from "@/lib/utils";
-import { useCartStore } from "@/store/cart.store";
-
-export interface FlavorOption {
-  id: string;
-  title: string;
-  imageUrl: string;
-  price: number; // já resolvido (promo ou original)
-}
+import { Button } from "@/components/ui/Button";
+import { formatCurrency } from "@/lib/utils";
+import { getActivePizzaSizesAction } from "@/actions/pizza-size.actions";
+import { useCartStore, CartFlavor } from "@/store/cart.store";
 
 interface PizzaBuilderModalProps {
-  isOpen: boolean;
+  product: {
+    id: string;
+    title: string;
+    imageUrl: string;
+  };
+  availableFlavors: { id: string; title: string }[];
   onClose: () => void;
-  flavors: FlavorOption[];
 }
 
-export function PizzaBuilderModal({ isOpen, onClose, flavors }: PizzaBuilderModalProps) {
-  const [flavorOneId, setFlavorOneId] = useState<string | null>(null);
-  const [flavorTwoId, setFlavorTwoId] = useState<string | null>(null);
+interface SizeData {
+  id: string;
+  name: string;
+  price: number;
+  maxFlavors: number;
+}
+
+export function PizzaBuilderModal({ product, availableFlavors, onClose }: PizzaBuilderModalProps) {
   const addItem = useCartStore((state) => state.addItem);
+  
+  const [sizes, setSizes] = useState<SizeData[]>([]);
+  const [isLoadingSizes, setIsLoadingSizes] = useState(true);
+  
+  const [step, setStep] = useState<1 | 2>(1);
+  const [selectedSize, setSelectedSize] = useState<SizeData | null>(null);
+  const [selectedFlavors, setSelectedFlavors] = useState<CartFlavor[]>([]);
 
-  if (!isOpen) return null;
-
-  const flavorOne = flavors.find((f) => f.id === flavorOneId) ?? null;
-  const flavorTwo = flavors.find((f) => f.id === flavorTwoId) ?? null;
-
-  // Regra: cobra-se o valor do sabor mais caro (espelha o use-case do backend)
-  const unitPrice = Math.max(flavorOne?.price ?? 0, flavorTwo?.price ?? 0);
-
-  const handleSelectFlavor = (id: string) => {
-    if (flavorOneId === id) {
-      setFlavorOneId(null);
-      return;
+  useEffect(() => {
+    async function loadSizes() {
+      const activeSizes = await getActivePizzaSizesAction();
+      setSizes(activeSizes);
+      setIsLoadingSizes(false);
     }
-    if (flavorTwoId === id) {
-      setFlavorTwoId(null);
-      return;
-    }
-    if (!flavorOneId) {
-      setFlavorOneId(id);
-    } else if (!flavorTwoId) {
-      setFlavorTwoId(id);
-    }
+    loadSizes();
+  }, []);
+
+  const toggleFlavor = (flavor: { id: string; title: string }) => {
+    if (!selectedSize) return;
+
+    setSelectedFlavors((prev) => {
+      const isAlreadySelected = prev.some((f) => f.id === flavor.id);
+      
+      if (isAlreadySelected) {
+        return prev.filter((f) => f.id !== flavor.id);
+      }
+      if (prev.length < selectedSize.maxFlavors) {
+        return [...prev, { id: flavor.id, name: flavor.title }];
+      }
+      return prev; 
+    });
   };
 
-  const handleConfirm = () => {
-    if (!flavorOne) return;
+  const handleAddToCart = () => {
+    if (!selectedSize || selectedFlavors.length === 0) return;
 
     addItem({
-      productId: flavorOne.id,
-      title: flavorTwo ? `Pizza ${flavorOne.title} / ${flavorTwo.title}` : `Pizza ${flavorOne.title}`,
-      imageUrl: flavorOne.imageUrl,
-      unitPrice,
+      id: crypto.randomUUID(),
+      productId: product.id,
+      name: product.title,
+      price: selectedSize.price, 
       quantity: 1,
-      pizzaFlavors: {
-        flavorOneId: flavorOne.id,
-        flavorOneTitle: flavorOne.title,
-        flavorTwoId: flavorTwo?.id ?? null,
-        flavorTwoTitle: flavorTwo?.title ?? null,
-      },
+      imageUrl: product.imageUrl,
+      flavors: selectedFlavors,
+      sizeId: selectedSize.id,
+      sizeName: selectedSize.name,
     });
 
-    setFlavorOneId(null);
-    setFlavorTwoId(null);
     onClose();
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 backdrop-blur-sm md:items-center">
-      <div className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-t-2xl bg-background-surface border border-border md:rounded-2xl">
-        <div className="sticky top-0 flex items-center justify-between border-b border-border bg-background-surface p-4">
-          <h2 className="font-display text-lg font-bold text-foreground">
-            Monte sua Pizza (até 2 sabores)
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-lg overflow-hidden rounded-xl bg-background-surface shadow-2xl">
+        <div className="flex items-center justify-between border-b border-border p-4">
+          <h2 className="font-display text-xl font-bold text-foreground">
+            Montar {product.title}
           </h2>
           <button onClick={onClose} className="text-foreground-muted hover:text-foreground">
-            <X size={22} />
+            <X size={24} />
           </button>
         </div>
 
-        <div className="p-4">
-          <p className="mb-4 text-sm text-foreground-muted">
-            Escolha 1 ou 2 sabores. O valor cobrado é sempre o do sabor de maior preço.
-          </p>
+        <div className="p-6">
+          {step === 1 && (
+            <div className="space-y-4">
+              <div className="mb-4">
+                <h3 className="font-medium text-foreground">1. Escolha o Tamanho</h3>
+                <p className="text-sm text-foreground-subtle">Isso define o valor da sua pizza.</p>
+              </div>
 
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            {flavors.map((flavor) => {
-              const isSelected = flavor.id === flavorOneId || flavor.id === flavorTwoId;
-              const isDisabled = !isSelected && !!flavorOneId && !!flavorTwoId;
+              {isLoadingSizes ? (
+                <p className="text-center text-sm text-foreground-muted">Carregando tamanhos...</p>
+              ) : (
+                <div className="grid gap-3">
+                  {sizes.map((size) => (
+                    <button
+                      key={size.id}
+                      onClick={() => setSelectedSize(size)}
+                      className={`flex items-center justify-between rounded-lg border p-4 text-left transition-colors ${
+                        selectedSize?.id === size.id
+                          ? "border-primary bg-primary/10"
+                          : "border-border bg-background-elevated hover:border-primary/50"
+                      }`}
+                    >
+                      <div>
+                        <p className="font-medium text-foreground">{size.name}</p>
+                        <p className="text-xs text-foreground-muted">Até {size.maxFlavors} sabores</p>
+                      </div>
+                      <p className="font-bold text-primary">{formatCurrency(size.price)}</p>
+                    </button>
+                  ))}
+                </div>
+              )}
 
-              return (
-                <button
-                  key={flavor.id}
-                  disabled={isDisabled}
-                  onClick={() => handleSelectFlavor(flavor.id)}
-                  className={cn(
-                    "relative flex flex-col overflow-hidden rounded-lg border-2 text-left transition-all",
-                    isSelected ? "border-primary" : "border-border",
-                    isDisabled && "opacity-40 cursor-not-allowed"
-                  )}
+              <Button 
+                className="mt-6 w-full" 
+                disabled={!selectedSize} 
+                onClick={() => setStep(2)}
+              >
+                Avançar para Sabores
+              </Button>
+            </div>
+          )}
+
+          {step === 2 && selectedSize && (
+            <div className="space-y-4">
+              <div className="mb-4 flex items-center justify-between">
+                <div>
+                  <h3 className="font-medium text-foreground">2. Escolha os Sabores</h3>
+                  <p className="text-sm text-foreground-subtle">
+                    Tamanho {selectedSize.name}: Escolha até {selectedSize.maxFlavors}.
+                  </p>
+                </div>
+                <button 
+                  onClick={() => setStep(1)} 
+                  className="text-sm text-primary hover:underline"
                 >
-                  {isSelected && (
-                    <div className="absolute top-1.5 right-1.5 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-white">
-                      <Check size={12} />
-                    </div>
-                  )}
-                  <div className="relative aspect-square w-full bg-background-elevated">
-                    <Image src={flavor.imageUrl} alt={flavor.title} fill className="object-cover" />
-                  </div>
-                  <div className="p-2">
-                    <p className="text-xs font-semibold text-foreground line-clamp-1">
-                      {flavor.title}
-                    </p>
-                    <p className="text-xs text-primary font-bold">{formatCurrency(flavor.price)}</p>
-                  </div>
+                  Trocar tamanho
                 </button>
-              );
-            })}
-          </div>
-        </div>
+              </div>
 
-        <div className="sticky bottom-0 border-t border-border bg-background-surface p-4">
-          <div className="mb-3 flex items-center justify-between">
-            <span className="text-sm text-foreground-muted">Total</span>
-            <span className="font-display text-xl font-bold text-primary">
-              {formatCurrency(unitPrice)}
-            </span>
-          </div>
-          <button
-            onClick={handleConfirm}
-            disabled={!flavorOne}
-            className="w-full rounded-lg bg-primary py-3 text-sm font-semibold text-white transition-colors hover:bg-primary-hover disabled:opacity-40"
-          >
-            Adicionar ao carrinho
-          </button>
+              <div className="grid max-h-64 gap-2 overflow-y-auto pr-2">
+                {availableFlavors.map((flavor) => {
+                  const isSelected = selectedFlavors.some(f => f.id === flavor.id);
+                  const isDisabled = !isSelected && selectedFlavors.length >= selectedSize.maxFlavors;
+
+                  return (
+                    <button
+                      key={flavor.id}
+                      disabled={isDisabled}
+                      onClick={() => toggleFlavor(flavor)}
+                      className={`flex items-center justify-between rounded-lg border p-3 text-left transition-colors ${
+                        isSelected
+                          ? "border-primary bg-primary/10"
+                          : isDisabled
+                          ? "cursor-not-allowed border-border bg-background/50 opacity-50"
+                          : "border-border bg-background-elevated hover:border-primary/50"
+                      }`}
+                    >
+                      <span className="text-sm font-medium text-foreground">{flavor.title}</span>
+                      {isSelected && <Check size={18} className="text-primary" />}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <Button 
+                className="mt-6 w-full" 
+                disabled={selectedFlavors.length === 0} 
+                onClick={handleAddToCart}
+              >
+                Adicionar ao Carrinho - {formatCurrency(selectedSize.price)}
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     </div>

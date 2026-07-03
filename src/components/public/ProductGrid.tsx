@@ -2,15 +2,17 @@
 
 import { useState } from "react";
 import { ProductCard, ProductCardProps } from "./ProductCard";
-import { PizzaBuilderModal, FlavorOption } from "./PizzaBuilderModal";
+import { PizzaBuilderModal } from "./PizzaBuilderModal";
 
 interface ProductGridProps {
   products: Omit<ProductCardProps, "onConfigurePizza">[];
-  flavorOptions: FlavorOption[];
+  // O tipo foi declarado direto aqui, já que removemos do modal
+  flavorOptions: { id: string; title: string }[];
 }
 
 export function ProductGrid({ products, flavorOptions }: ProductGridProps) {
-  const [isPizzaModalOpen, setIsPizzaModalOpen] = useState(false);
+  // Em vez de só um boolean, guardamos a pizza exata que o cliente clicou
+  const [selectedPizza, setSelectedPizza] = useState<Omit<ProductCardProps, "onConfigurePizza"> | null>(null);
 
   return (
     <>
@@ -19,16 +21,24 @@ export function ProductGrid({ products, flavorOptions }: ProductGridProps) {
           <ProductCard
             key={product.id}
             {...product}
-            onConfigurePizza={() => setIsPizzaModalOpen(true)}
+            // Quando clica em montar, salva o produto no state
+            onConfigurePizza={() => setSelectedPizza(product)}
           />
         ))}
       </div>
 
-      <PizzaBuilderModal
-        isOpen={isPizzaModalOpen}
-        onClose={() => setIsPizzaModalOpen(false)}
-        flavors={flavorOptions}
-      />
+      {/* Renderiza o modal apenas se existir uma pizza selecionada */}
+      {selectedPizza && (
+        <PizzaBuilderModal
+          product={{
+            id: selectedPizza.id,
+            title: selectedPizza.title,
+            imageUrl: selectedPizza.imageUrl,
+          }}
+          availableFlavors={flavorOptions}
+          onClose={() => setSelectedPizza(null)}
+        />
+      )}
     </>
   );
 }
