@@ -24,10 +24,13 @@ export async function createOrderUseCase(
     let unitPrice: number;
 
     if (item.pizzaFlavors) {
+      // Agora enviamos o sizeId para validar as regras do banco
       const pizzaPrice = await calculatePizzaPriceUseCase(
+        item.pizzaFlavors.sizeId,
         item.pizzaFlavors.flavorOneId,
         item.pizzaFlavors.flavorTwoId
       );
+      
       if (!pizzaPrice.success || pizzaPrice.unitPrice == null) {
         return { success: false, error: pizzaPrice.error ?? "Erro ao calcular preço da pizza" };
       }
@@ -52,7 +55,6 @@ export async function createOrderUseCase(
       unitPrice,
       totalPrice,
       observation: item.observation ?? null,
-      // CORREÇÃO: Garantindo que o sizeId esteja presente na estrutura esperada pelo repositório
       pizzaFlavors: item.pizzaFlavors 
         ? {
             sizeId: item.pizzaFlavors.sizeId, 

@@ -1,69 +1,80 @@
 import { prisma } from "@/lib/prisma";
-import { Prisma } from "@prisma/client";
-import { CreateProductDTO, UpdateProductDTO } from "../domain/dtos/product.dto";
+import { Prisma, ProductType } from "@prisma/client";
 
-/**
- * Camada de acesso a dados do Produto.
- * Isola o Prisma do restante da aplicação — se um dia trocar de ORM,
- * só esta classe muda (mesmo princípio de Repository do Spring Data).
- */
+export interface CreateProductInput {
+  title: string;
+  description: string;
+  imageUrl: string;
+  type: ProductType;
+  servesInfo?: string | null;
+  originalPrice: number;
+  promoPrice?: number | null;
+  isPromoActive: boolean;
+  isAvailable: boolean;
+  isFlavorEligible: boolean;
+  categoryId: string;
+  availableSizeIds?: string[];
+}
+
+export interface UpdateProductInput extends Partial<CreateProductInput> {}
+
 export class ProductRepository {
-  async findAll() {
-    return prisma.product.findMany({
-      include: { category: true },
-      orderBy: { createdAt: "desc" },
+  async create(data: CreateProductInput) {
+    return prisma.product.create({
+      data: {
+        title: data.title,
+        description: data.description,
+        imageUrl: data.imageUrl,
+        type: data.type,
+        servesInfo: data.servesInfo,
+        originalPrice: new Prisma.Decimal(data.originalPrice),
+        promoPrice: data.promoPrice ? new Prisma.Decimal(data.promoPrice) : null,
+        isPromoActive: data.isPromoActive,
+        isAvailable: data.isAvailable,
+        isFlavorEligible: data.isFlavorEligible,
+        categoryId: data.categoryId,
+        // Aqui conectamos os tamanhos selecionados ou deixamos vazio
+        availableSizes: {
+          connect: data.availableSizeIds?.map((id) => ({ id })) || [],
+        },
+      },
     });
   }
 
-  async findAvailableByCategory(categorySlug?: string) {
-    return prisma.product.findMany({
-      where: {
-        isAvailable: true,
-        category: categorySlug ? { slug: categorySlug } : undefined,
+  async update(id: string, data: UpdateProductInput) {
+    return prisma.product.update({
+      where: { id },
+      data: {
+        title: data.title,
+        description: data.description,
+        imageUrl: data.imageUrl,
+        type: data.type,
+        servesInfo: data.servesInfo,
+        originalPrice: data.originalPrice ? new Prisma.Decimal(data.originalPrice) : undefined,
+        promoPrice: data.promoPrice !== undefined ? (data.promoPrice ? new Prisma.Decimal(data.promoPrice) : null) : undefined,
+        isPromoActive: data.isPromoActive,
+        isAvailable: data.isAvailable,
+        isFlavorEligible: data.isFlavorEligible,
+        categoryId: data.categoryId,
+        // O método 'set' substitui a lista anterior pela nova, o que é ideal para updates
+        availableSizes: data.availableSizeIds !== undefined ? {
+          set: data.availableSizeIds.map((id) => ({ id })),
+        } : undefined,
       },
-      include: { category: true },
-      orderBy: { title: "asc" },
     });
   }
 
   async findById(id: string) {
     return prisma.product.findUnique({
       where: { id },
-      include: { category: true },
+      include: { category: true, availableSizes: true },
     });
   }
 
-  /** Lista produtos elegíveis a compor sabores de pizza (usado no PizzaBuilderModal). */
-  async findFlavorEligible() {
+  async findAll() {
     return prisma.product.findMany({
-      where: { isFlavorEligible: true, isAvailable: true },
-      orderBy: { title: "asc" },
-    });
-  }
-
-  async create(data: CreateProductDTO) {
-    return prisma.product.create({
-      data: {
-        ...data,
-        originalPrice: new Prisma.Decimal(data.originalPrice),
-        promoPrice: data.promoPrice != null ? new Prisma.Decimal(data.promoPrice) : null,
-      },
-    });
-  }
-
-  async update(id: string, data: UpdateProductDTO) {
-    return prisma.product.update({
-      where: { id },
-      data: {
-        ...data,
-        originalPrice: data.originalPrice != null ? new Prisma.Decimal(data.originalPrice) : undefined,
-        promoPrice:
-          data.promoPrice !== undefined
-            ? data.promoPrice != null
-              ? new Prisma.Decimal(data.promoPrice)
-              : null
-            : undefined,
-      },
+      include: { category: true, availableSizes: true },
+      orderBy: { createdAt: "desc" },
     });
   }
 
@@ -72,7 +83,31 @@ export class ProductRepository {
   }
 
   async toggleAvailability(id: string, isAvailable: boolean) {
-    return prisma.product.update({ where: { id }, data: { isAvailable } });
+    return prisma.product.update({
+      where: { id },
+      data: { isAvailable },
+    });
+  }
+
+  async findAvailableByCategory() {
+    return prisma.category.findMany({
+      where: { isActive: true, products: { some: { isAvailable: true } } },
+      include: {
+        products: {
+          where: { isAvailable: true },
+          include: { availableSizes: true },
+          orderBy: { title: "asc" },
+        },
+      },
+      orderBy: { order: "asc" },
+    });
+  }
+
+  async findFlavorEligible() {
+    return prisma.product.findMany({
+      where: { isFlavorEligible: true, isAvailable: true },
+      include: { availableSizes: true },
+    });
   }
 }
 

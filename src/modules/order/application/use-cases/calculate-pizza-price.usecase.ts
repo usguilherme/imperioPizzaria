@@ -1,45 +1,67 @@
-import { productRepository } from "@/modules/product/infrastructure/product.repository";
+import { prisma } from "@/lib/prisma";
 
-interface PizzaPriceResult {
+interface CalculatePizzaPriceResult {
   success: boolean;
   unitPrice?: number;
   error?: string;
 }
 
-/**
- * Regra de negócio clássica de pizzaria: quando o cliente monta pizza de 2 sabores,
- * o preço cobrado é o do sabor de maior valor (não a soma, nem a média).
- * Isolar essa regra em um use-case evita duplicar a lógica no front e no back.
- */
 export async function calculatePizzaPriceUseCase(
+  sizeId: string,
   flavorOneId: string,
   flavorTwoId?: string | null
-): Promise<PizzaPriceResult> {
-  const flavorOne = await productRepository.findById(flavorOneId);
+): Promise<CalculatePizzaPriceResult> {
+  try {
+    // 1. Busca o preço base do tamanho da pizza
+    const size = await prisma.pizzaSize.findUnique({
+      where: { id: sizeId },
+    });
 
-  if (!flavorOne || !flavorOne.isFlavorEligible) {
-    return { success: false, error: "Sabor 1 inválido ou não elegível" };
+    if (!size) {
+      return { success: false, error: "Tamanho de pizza não encontrado." };
+    }
+
+    // 2. Busca Sabor 1 e valida tamanhos permitidos
+    const flavorOne = await prisma.product.findUnique({
+      where: { id: flavorOneId },
+      include: { availableSizes: true }
+    });
+
+    if (!flavorOne || !flavorOne.isAvailable) {
+      return { success: false, error: "Primeiro sabor indisponível." };
+    }
+
+    if (flavorOne.availableSizes.length > 0) {
+      const isAllowed = flavorOne.availableSizes.some(s => s.id === sizeId);
+      if (!isAllowed) {
+        return { success: false, error: `O sabor '${flavorOne.title}' não está disponível neste tamanho.` };
+      }
+    }
+
+    // 3. Busca Sabor 2 e valida (se houver 2 sabores)
+    if (flavorTwoId) {
+      const flavorTwo = await prisma.product.findUnique({
+        where: { id: flavorTwoId },
+        include: { availableSizes: true }
+      });
+
+      if (!flavorTwo || !flavorTwo.isAvailable) {
+        return { success: false, error: "Segundo sabor indisponível." };
+      }
+
+      if (flavorTwo.availableSizes.length > 0) {
+        const isAllowed = flavorTwo.availableSizes.some(s => s.id === sizeId);
+        if (!isAllowed) {
+          return { success: false, error: `O sabor '${flavorTwo.title}' não está disponível neste tamanho.` };
+        }
+      }
+    }
+
+    // 4. Se tudo estiver ok, o preço da pizza é o preço do tamanho escolhido
+    return { success: true, unitPrice: Number(size.price) };
+
+  } catch (error) {
+    console.error("Erro calcular pizza:", error);
+    return { success: false, error: "Erro interno ao validar pizza." };
   }
-
-  const priceOne = flavorOne.isPromoActive && flavorOne.promoPrice
-    ? Number(flavorOne.promoPrice)
-    : Number(flavorOne.originalPrice);
-
-  if (!flavorTwoId) {
-    return { success: true, unitPrice: priceOne };
-  }
-
-  const flavorTwo = await productRepository.findById(flavorTwoId);
-  if (!flavorTwo || !flavorTwo.isFlavorEligible) {
-    return { success: false, error: "Sabor 2 inválido ou não elegível" };
-  }
-
-  const priceTwo = flavorTwo.isPromoActive && flavorTwo.promoPrice
-    ? Number(flavorTwo.promoPrice)
-    : Number(flavorTwo.originalPrice);
-
-  // Regra: cobra-se sempre o valor do sabor mais caro
-  const unitPrice = Math.max(priceOne, priceTwo);
-
-  return { success: true, unitPrice };
 }

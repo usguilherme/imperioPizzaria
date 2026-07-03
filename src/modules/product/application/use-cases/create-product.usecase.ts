@@ -20,10 +20,15 @@ export async function createProductUseCase(
     return { success: false, error: parsed.error.errors[0]?.message ?? "Dados inválidos" };
   }
 
+  // Cast para 'any' para permitir campos extras que o Zod ainda não valida
+  const data = parsed.data as any;
+
   const product = await productRepository.create({
-    ...parsed.data,
-    servesInfo: parsed.data.servesInfo ?? null,
-    promoPrice: parsed.data.promoPrice ?? null,
+    ...data,
+    servesInfo: data.servesInfo ?? null,
+    promoPrice: data.promoPrice ?? null,
+    isAvailable: data.isAvailable ?? true, // Define como disponível por padrão
+    availableSizeIds: data.availableSizeIds ?? [], // Passa os tamanhos selecionados
   });
 
   return { success: true, data: { id: product.id } };

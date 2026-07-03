@@ -12,14 +12,19 @@ interface CategoryOption {
   name: string;
 }
 
+interface SizeOption {
+  id: string;
+  name: string;
+}
+
 interface ProductFormProps {
   categories: CategoryOption[];
-  initialData?: ProductSchemaInput & { id: string };
+  availableSizes: SizeOption[];
+  initialData?: ProductSchemaInput & { id: string; availableSizes?: { id: string }[] };
 }
 
 const MAX_IMAGE_SIZE_MB = 3;
 
-/** Converte o arquivo escolhido pelo usuário em uma data URL (base64), salva direto no campo imageUrl. */
 function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -29,13 +34,13 @@ function fileToBase64(file: File): Promise<string> {
   });
 }
 
-export function ProductForm({ categories, initialData }: ProductFormProps) {
+export function ProductForm({ categories, availableSizes, initialData }: ProductFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [isProcessingImage, setIsProcessingImage] = useState(false);
 
-  const [form, setForm] = useState<ProductSchemaInput>({
+  const [form, setForm] = useState<ProductSchemaInput & { availableSizeIds: string[] }>({
     title: initialData?.title ?? "",
     description: initialData?.description ?? "",
     imageUrl: initialData?.imageUrl ?? "",
@@ -46,6 +51,7 @@ export function ProductForm({ categories, initialData }: ProductFormProps) {
     isPromoActive: initialData?.isPromoActive ?? false,
     isFlavorEligible: initialData?.isFlavorEligible ?? false,
     categoryId: initialData?.categoryId ?? categories[0]?.id ?? "",
+    availableSizeIds: initialData?.availableSizes?.map(s => s.id) ?? [],
   });
 
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -128,29 +134,18 @@ export function ProductForm({ categories, initialData }: ProductFormProps) {
       </div>
 
       <div>
-        <label className="mb-1 block text-sm font-medium text-foreground-muted">
-          Foto do produto
-        </label>
-
+        <label className="mb-1 block text-sm font-medium text-foreground-muted">Foto do produto</label>
         {form.imageUrl && (
           <div className="relative mb-3 h-40 w-40 overflow-hidden rounded-lg border border-border bg-background-elevated">
             <Image src={form.imageUrl} alt="Prévia da imagem" fill className="object-cover" unoptimized />
           </div>
         )}
-
         <input
           type="file"
           accept="image/*"
           onChange={handleImageChange}
           className="block w-full text-sm text-foreground-muted file:mr-3 file:rounded-lg file:border-0 file:bg-primary file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-primary-hover"
         />
-
-        {isProcessingImage && (
-          <p className="mt-1 text-xs text-foreground-subtle">Carregando imagem...</p>
-        )}
-        <p className="mt-1 text-xs text-foreground-subtle">
-          Formatos aceitos: JPG, PNG, WEBP. Tamanho máximo: {MAX_IMAGE_SIZE_MB}MB.
-        </p>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
@@ -180,16 +175,34 @@ export function ProductForm({ categories, initialData }: ProductFormProps) {
         </div>
       </div>
 
-      <div>
-        <label className="mb-1 block text-sm font-medium text-foreground-muted">
-          Rendimento (opcional)
-        </label>
-        <input
-          value={form.servesInfo ?? ""}
-          onChange={(e) => setForm({ ...form, servesInfo: e.target.value })}
-          placeholder="Ex: Serve 4 pessoas"
-          className="w-full rounded-lg border border-border bg-background-surface px-3 py-2 text-foreground focus:border-primary focus:outline-none"
-        />
+      {/* Seção de Tamanhos Opcionais */}
+      <div className="space-y-2">
+        <label className="block text-sm font-medium text-foreground-muted">Tamanhos Disponíveis</label>
+        <div className="flex flex-wrap gap-4 rounded-lg border border-border p-3">
+          {availableSizes.length === 0 ? (
+            <p className="text-xs text-foreground-muted italic">Nenhum tamanho cadastrado.</p>
+          ) : (
+            availableSizes.map((size) => (
+              <label key={size.id} className="flex items-center gap-2 text-sm text-foreground">
+                <input
+                  type="checkbox"
+                  className="accent-primary"
+                  checked={form.availableSizeIds.includes(size.id)}
+                  onChange={(e) => {
+                    const newIds = e.target.checked
+                      ? [...form.availableSizeIds, size.id]
+                      : form.availableSizeIds.filter((id) => id !== size.id);
+                    setForm({ ...form, availableSizeIds: newIds });
+                  }}
+                />
+                {size.name}
+              </label>
+            ))
+          )}
+        </div>
+        <p className="text-xs text-foreground-subtle">
+          * Deixe vazio para permitir todos os tamanhos cadastrados.
+        </p>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
@@ -211,9 +224,7 @@ export function ProductForm({ categories, initialData }: ProductFormProps) {
             type="number"
             step="0.01"
             value={form.promoPrice ?? ""}
-            onChange={(e) =>
-              setForm({ ...form, promoPrice: e.target.value ? Number(e.target.value) : null })
-            }
+            onChange={(e) => setForm({ ...form, promoPrice: e.target.value ? Number(e.target.value) : null })}
             className="w-full rounded-lg border border-border bg-background-surface px-3 py-2 text-foreground focus:border-primary focus:outline-none"
           />
         </div>

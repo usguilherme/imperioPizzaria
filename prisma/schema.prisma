@@ -4,8 +4,8 @@ generator client {
 
 datasource db {
   provider  = "postgresql"
-  url       = env("DATABASE_URL")       // connection pooling (usada em runtime)
-  directUrl = env("DIRECT_URL")         // conexão direta (usada só pelas migrations)
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // ==========================================
@@ -100,6 +100,9 @@ model Product {
   flavorOne        PizzaFlavorCombination[] @relation("FlavorOne")
   flavorTwo        PizzaFlavorCombination[] @relation("FlavorTwo")
 
+  // Relação M:N adicionada aqui
+  availableSizes   PizzaSize[] @relation("ProductSizes")
+
   createdAt        DateTime    @default(now())
   updatedAt        DateTime    @updatedAt
 
@@ -119,6 +122,9 @@ model PizzaSize {
   isActive    Boolean  @default(true)
 
   pizzaCombinations PizzaFlavorCombination[]
+  
+  // Relação M:N adicionada aqui
+  products          Product[] @relation("ProductSizes")
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

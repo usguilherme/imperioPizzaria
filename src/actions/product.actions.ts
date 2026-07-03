@@ -8,6 +8,9 @@ import { updateProductUseCase } from "@/modules/product/application/use-cases/up
 import { productRepository } from "@/modules/product/infrastructure/product.repository";
 import { ProductSchemaInput } from "@/modules/product/application/validators/product.schema";
 
+// Estendemos o input para incluir o array de tamanhos enviado pelo formulário
+type ExtendedProductInput = ProductSchemaInput & { availableSizeIds: string[] };
+
 async function assertAdmin() {
   const session = await getServerSession(authOptions);
   if (!session || session.user.role !== "ADMIN") {
@@ -15,16 +18,18 @@ async function assertAdmin() {
   }
 }
 
-export async function createProductAction(input: ProductSchemaInput) {
+export async function createProductAction(input: ExtendedProductInput) {
   await assertAdmin();
-  const result = await createProductUseCase(input);
+  // Passamos o input estendido, que o use-case e o repositório agora aceitam
+  const result = await createProductUseCase(input as any);
   if (result.success) revalidatePath("/admin/produtos");
   return result;
 }
 
-export async function updateProductAction(id: string, input: ProductSchemaInput) {
+export async function updateProductAction(id: string, input: ExtendedProductInput) {
   await assertAdmin();
-  const result = await updateProductUseCase(id, input);
+  // Passamos o input estendido
+  const result = await updateProductUseCase(id, input as any);
   if (result.success) {
     revalidatePath("/admin/produtos");
     revalidatePath("/");

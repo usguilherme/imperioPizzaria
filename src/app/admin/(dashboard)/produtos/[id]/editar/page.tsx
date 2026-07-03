@@ -7,9 +7,13 @@ interface EditProductPageProps {
 }
 
 export default async function EditProductPage({ params }: EditProductPageProps) {
-  const [product, categories] = await Promise.all([
-    prisma.product.findUnique({ where: { id: params.id } }),
+  const [product, categories, sizes] = await Promise.all([
+    prisma.product.findUnique({ 
+      where: { id: params.id },
+      include: { availableSizes: true } 
+    }),
     prisma.category.findMany({ where: { isActive: true }, orderBy: { order: "asc" } }),
+    prisma.pizzaSize.findMany({ where: { isActive: true } })
   ]);
 
   if (!product) notFound();
@@ -19,6 +23,7 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
       <h1 className="mb-6 font-display text-2xl font-bold text-foreground">Editar produto</h1>
       <ProductForm
         categories={categories}
+        availableSizes={sizes}
         initialData={{
           id: product.id,
           title: product.title,
@@ -31,6 +36,7 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
           isPromoActive: product.isPromoActive,
           isFlavorEligible: product.isFlavorEligible,
           categoryId: product.categoryId,
+          availableSizes: product.availableSizes, // Passando os tamanhos atuais do produto
         }}
       />
     </div>

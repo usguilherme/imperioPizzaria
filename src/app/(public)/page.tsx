@@ -20,14 +20,14 @@ const BANNER_SLIDES = [
 ];
 
 export default async function HomePage() {
-  const products = await productRepository.findAvailableByCategory();
+  const categories = await productRepository.findAvailableByCategory();
   const flavorEligible = await productRepository.findFlavorEligible();
 
-  const categoriesMap = new Map<string, typeof products>();
-  for (const product of products) {
-    const key = product.category.slug;
-    if (!categoriesMap.has(key)) categoriesMap.set(key, []);
-    categoriesMap.get(key)!.push(product);
+  // O Map agora armazena os produtos associados ao slug da categoria
+  const categoriesMap = new Map<string, typeof categories[0]['products']>();
+  
+  for (const category of categories) {
+    categoriesMap.set(category.slug, category.products);
   }
 
   const flavorOptions = flavorEligible.map((f) => ({
@@ -41,27 +41,32 @@ export default async function HomePage() {
     <div className="mx-auto max-w-7xl px-4 py-6 space-y-10">
       <PromoBanner slides={BANNER_SLIDES} />
 
-      {Array.from(categoriesMap.entries()).map(([slug, items]) => (
-        <section key={slug} id={slug}>
-          <h2 className="mb-4 font-display text-2xl font-bold text-foreground">
-            {items[0]?.category.name}
-          </h2>
-          <ProductGrid
-            flavorOptions={flavorOptions}
-            products={items.map((p) => ({
-              id: p.id,
-              title: p.title,
-              description: p.description,
-              imageUrl: p.imageUrl,
-              servesInfo: p.servesInfo,
-              originalPrice: Number(p.originalPrice),
-              promoPrice: p.promoPrice != null ? Number(p.promoPrice) : null,
-              isPromoActive: p.isPromoActive,
-              isPizza: p.type === "PIZZA",
-            }))}
-          />
-        </section>
-      ))}
+      {Array.from(categoriesMap.entries()).map(([slug, items]) => {
+        // Encontra a categoria atual para exibir o nome correto
+        const categoryName = categories.find(c => c.slug === slug)?.name;
+
+        return (
+          <section key={slug} id={slug}>
+            <h2 className="mb-4 font-display text-2xl font-bold text-foreground">
+              {categoryName}
+            </h2>
+            <ProductGrid
+              flavorOptions={flavorOptions}
+              products={items.map((p) => ({
+                id: p.id,
+                title: p.title,
+                description: p.description,
+                imageUrl: p.imageUrl,
+                servesInfo: p.servesInfo,
+                originalPrice: Number(p.originalPrice),
+                promoPrice: p.promoPrice != null ? Number(p.promoPrice) : null,
+                isPromoActive: p.isPromoActive,
+                isPizza: p.type === "PIZZA",
+              }))}
+            />
+          </section>
+        );
+      })}
     </div>
   );
 }
