@@ -4,13 +4,13 @@ import { OrderStatus } from "@prisma/client";
 import { formatCurrency, formatDateTime } from "@/lib/utils";
 import { updateOrderStatusAction, deleteOrderAction } from "@/actions/order.actions";
 import { useTransition } from "react";
-import { Trash2, MessageCircle } from "lucide-react"; // Ícone importado
+import { Trash2, MessageCircle } from "lucide-react";
 
 export interface KanbanOrder {
   id: string;
   code: string;
   customerName: string;
-  customerPhone?: string; // Telefone opcional[cite: 5]
+  customerPhone?: string; 
   status: OrderStatus;
   total: number;
   createdAt: string;
@@ -98,10 +98,10 @@ export function OrderKanbanColumn({
                 </button>
               )}
               
-              {/* Botão de WhatsApp usando comparação com Enum OrderStatus[cite: 5] */}
+              {/* Botão de WhatsApp */}
               {order.status === OrderStatus.READY && order.customerPhone && (
                 <a
-                  href={`https://wa.me/${order.customerPhone.replace(/\D/g, '')}?text=Olá, ${order.customerName}! Seu pedido #${order.code} está pronto.`}
+                  href={`https://wa.me/55${order.customerPhone.replace(/\D/g, '')}?text=Olá, ${order.customerName}! Seu pedido #${order.code} está pronto.`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-center rounded-md bg-green-500/10 px-2 py-1.5 text-green-500 transition-colors hover:bg-green-500/20"
