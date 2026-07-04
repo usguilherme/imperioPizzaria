@@ -96,10 +96,10 @@ export function OrderKanbanColumn({
                   </button>
                 )}
                 
-                {/* Botão WhatsApp no Card */}
+                {/* Botão WhatsApp no Card com codificação segura */}
                 {order.customerPhone && (
                   <a
-                    href={`https://wa.me/55${order.customerPhone.replace(/\D/g, '')}?text=Olá, ${order.customerName}! Seu pedido #${order.code} está pronto.`}
+                    href={`https://wa.me/55${order.customerPhone.replace(/\D/g, '')}?text=${encodeURIComponent(`Olá, ${order.customerName}! Seu pedido #${order.code} está pronto.`)}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={(e) => e.stopPropagation()}
@@ -135,10 +135,10 @@ export function OrderKanbanColumn({
               <p><strong>Endereço:</strong> {selectedOrder.customerAddress || "Não informado"}</p>
               <p><strong>Total:</strong> {formatCurrency(selectedOrder.total)}</p>
               
-              {/* Botão WhatsApp no Modal */}
+              {/* Botão WhatsApp no Modal com codificação segura */}
               {selectedOrder.customerPhone && (
                 <a
-                  href={`https://wa.me/55${selectedOrder.customerPhone.replace(/\D/g, '')}?text=Olá, ${selectedOrder.customerName}! Seu pedido #${selectedOrder.code} está pronto.`}
+                  href={`https://wa.me/55${selectedOrder.customerPhone.replace(/\D/g, '')}?text=${encodeURIComponent(`Olá, ${selectedOrder.customerName}! Seu pedido #${selectedOrder.code} está pronto.`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex w-full items-center justify-center gap-2 rounded-md bg-green-500/10 py-2 text-green-500 hover:bg-green-500/20"
