@@ -8,6 +8,9 @@ interface Order {
   id: string;
   code: string;
   customerName: string;
+  customerPhone?: string | null;
+  deliveryAddress?: string | null;
+  paymentMethod?: string | null;
   items: any[];
   total: number;
 }
@@ -30,7 +33,7 @@ export default function KitchenPage() {
     // 1. Abre a janela de impressão
     window.print();
 
-    // 2. Aguarda 2 segundos antes de marcar no banco, evitando sumir antes da hora[cite: 1]
+    // 2. Aguarda 2 segundos antes de marcar no banco, evitando sumir antes da hora
     setTimeout(() => {
       fetch(`/api/orders/mark-printed/${order.id}`, { method: "POST" }).then(() => {
         fetchOrders();
@@ -40,7 +43,7 @@ export default function KitchenPage() {
 
   return (
     <div className="p-4">
-      {/* Botão de Voltar adicionado[cite: 1] */}
+      {/* Botão de Voltar adicionado */}
       <Link href="/admin" className="text-sm text-gray-600 hover:text-black mb-4 inline-block">
         ← Voltar para o Dashboard
       </Link>
@@ -51,23 +54,27 @@ export default function KitchenPage() {
         {orders.map((order) => (
           <div key={order.id} className="border p-4 rounded bg-white shadow-sm">
             
-            {/* ID único para cada cupom[cite: 1] */}
+            {/* ID único para cada cupom */}
             <div id={`cupom-termico-${order.id}`} className="ticket-container">
-              <h1 className="ticket-title">IMPÉRIO BURGUER</h1>
-              <p className="ticket-subtitle">Pedido #{order.code}</p>
-              <div className="ticket-divider" />
+              <h1 className="ticket-title text-center font-bold text-xl">IMPÉRIO BURGUER</h1>
+              <p className="ticket-subtitle text-center text-sm">Pedido #{order.code}</p>
+              <div className="ticket-divider border-t border-dashed border-black my-2" />
               
-              <div className="ticket-line">Cliente: {order.customerName}</div>
-              <div className="ticket-divider" />
+              <div className="ticket-line"><strong>Cliente:</strong> {order.customerName}</div>
+              <div className="ticket-line"><strong>Fone:</strong> {order.customerPhone || "Não informado"}</div>
+              <div className="ticket-line"><strong>Endereço:</strong> {order.deliveryAddress || "Retirada / Não informado"}</div>
+              <div className="ticket-line"><strong>Pagamento:</strong> {order.paymentMethod || "Não informado"}</div>
+              
+              <div className="ticket-divider border-t border-dashed border-black my-2" />
               
               {order.items.map((item: any) => (
-                <div key={item.id} className="ticket-item">
-                  <p className="ticket-item-qty">{item.quantity}x {item.product?.title || item.name}</p>
+                <div key={item.id} className="ticket-item mb-2">
+                  <p className="ticket-item-qty font-bold">{item.quantity}x {item.product?.title || item.name}</p>
                 </div>
               ))}
               
-              <div className="ticket-divider" />
-              <p className="ticket-total">TOTAL: {formatCurrency(order.total)}</p>
+              <div className="ticket-divider border-t border-dashed border-black my-2" />
+              <p className="ticket-total text-right font-bold text-lg">TOTAL: {formatCurrency(order.total)}</p>
             </div>
             
             <button 
