@@ -1,43 +1,42 @@
-import { notFound } from "next/navigation";
-import { orderRepository } from "@/modules/order/infrastructure/order.repository";
-import { KitchenTicket } from "@/components/admin/KitchenTicket";
-
-const PAYMENT_LABELS: Record<string, string> = {
-  PIX: "Pix",
-  CREDIT_CARD: "Cartão de Crédito",
-  DEBIT_CARD: "Cartão de Débito",
-  CASH: "Dinheiro",
-};
-
-interface ComandaPageProps {
-  params: Promise<{ id: string }>;
-}
-
-export default async function ComandaPage({ params }: ComandaPageProps) {
-  const { id } = await params;
-  const order = await orderRepository.findById(id);
-  
-  if (!order) notFound();
-
+// Dentro do componente KitchenTicket.tsx
+export function KitchenTicket({ order }: { order: any }) {
   return (
-    <KitchenTicket
-      order={{
-        code: order.code,
-        customerName: order.customerName,
-        customerPhone: order.customerPhone,
-        deliveryAddress: order.deliveryAddress,
-        paymentMethod: PAYMENT_LABELS[order.paymentMethod] ?? order.paymentMethod,
-        createdAt: order.createdAt.toISOString(),
-        notes: order.notes,
-        total: Number(order.total),
-        items: order.items.map((item) => ({
-          quantity: item.quantity,
-          productTitle: item.product.title,
-          observation: item.observation,
-          flavorOne: item.pizzaCombination?.flavorOne.title,
-          flavorTwo: item.pizzaCombination?.flavorTwo?.title ?? null,
-        })),
-      }}
-    />
+    <div className="p-4 w-full max-w-sm">
+      {/* Cabeçalho que você já tem */}
+      <h1 className="font-bold">IMPÉRIO BURGUER</h1>
+      <p>Pedido #{order.code}</p>
+      <hr />
+
+      {/* Itens para a cozinha */}
+      <div className="my-4">
+        {order.items.map((item: any, i: number) => (
+          <div key={i}>
+            <p>{item.quantity}x {item.productTitle}</p>
+            {item.flavorOne && <p className="text-xs">Sabor 1: {item.flavorOne}</p>}
+            {item.flavorTwo && <p className="text-xs">Sabor 2: {item.flavorTwo}</p>}
+            {item.observation && <p className="text-xs italic">Obs: {item.observation}</p>}
+          </div>
+        ))}
+      </div>
+      <hr />
+
+      {/* DADOS PARA O ENTREGADOR (A parte que faltava) */}
+      <div className="mt-4 text-sm space-y-1">
+        <p><strong>Cliente:</strong> {order.customerName}</p>
+        <p><strong>Tel:</strong> {order.customerPhone}</p>
+        <p><strong>Endereço:</strong> {order.deliveryAddress}</p>
+        <p><strong>Pagamento:</strong> {order.paymentMethod}</p>
+        {order.notes && <p><strong>Obs Pedido:</strong> {order.notes}</p>}
+      </div>
+
+      <div className="mt-4 font-bold text-lg">
+        TOTAL: {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(order.total)}
+      </div>
+      
+      {/* Botão de impressão */}
+      <button onClick={() => window.print()} className="mt-6 w-full bg-red-600 text-white p-2 rounded">
+        Imprimir Cupom
+      </button>
+    </div>
   );
 }
