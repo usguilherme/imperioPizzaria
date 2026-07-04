@@ -69,57 +69,64 @@ export function OrderKanbanColumn({
       </div>
 
       <div className="flex-1 space-y-2 overflow-y-auto p-3">
-        {orders.map((order) => (
-          <div
-            key={order.id}
-            className="rounded-lg border border-border bg-background-elevated p-3 transition-opacity"
-            style={{ opacity: isPending ? 0.6 : 1 }}
-          >
-            <div className="mb-1 flex items-center justify-between">
-              <span className="text-xs font-bold text-accent">{order.code}</span>
-              <span className="text-[11px] text-foreground-subtle">
-                {formatDateTime(order.createdAt)}
-              </span>
-            </div>
-            <p className="text-sm font-medium text-foreground">{order.customerName}</p>
-            <p className="mb-2 text-xs text-foreground-muted">
-              {order.itemsCount} {order.itemsCount === 1 ? "item" : "itens"} ·{" "}
-              {formatCurrency(order.total)}
-            </p>
+        {orders.map((order) => {
+          // DEBUG: Verifique o console do navegador (F12)
+          console.log("Pedido:", order.code, "Telefone:", order.customerPhone);
+          
+          return (
+            <div
+              key={order.id}
+              className="rounded-lg border border-border bg-background-elevated p-3 transition-opacity"
+              style={{ opacity: isPending ? 0.6 : 1 }}
+            >
+              <div className="mb-1 flex items-center justify-between">
+                <span className="text-xs font-bold text-accent">{order.code}</span>
+                <span className="text-[11px] text-foreground-subtle">
+                  {formatDateTime(order.createdAt)}
+                </span>
+              </div>
+              <p className="text-sm font-medium text-foreground">{order.customerName}</p>
+              <p className="mb-2 text-xs text-foreground-muted">
+                {order.itemsCount} {order.itemsCount === 1 ? "item" : "itens"} ·{" "}
+                {formatCurrency(order.total)}
+              </p>
 
-            <div className="flex gap-2">
-              {nextStatus && (
+              <div className="flex gap-2">
+                {nextStatus && (
+                  <button
+                    onClick={() => handleAdvance(order.id)}
+                    disabled={isPending}
+                    className="flex-1 rounded-md bg-primary/15 py-1.5 text-xs font-semibold text-primary transition-colors hover:bg-primary/25 disabled:opacity-50"
+                  >
+                    {nextLabel}
+                  </button>
+                )}
+                
+                {/* Botão de WhatsApp */}
+                {order.customerPhone ? (
+                  <a
+                    href={`https://wa.me/55${order.customerPhone.replace(/\D/g, '')}?text=Olá, ${order.customerName}! Seu pedido #${order.code} está pronto.`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center rounded-md bg-green-500/10 px-2 py-1.5 text-green-500 transition-colors hover:bg-green-500/20"
+                  >
+                    <MessageCircle size={16} />
+                  </a>
+                ) : (
+                  <span className="text-[10px] text-red-400 self-center">Sem tel</span>
+                )}
+                
                 <button
-                  onClick={() => handleAdvance(order.id)}
+                  onClick={() => handleDelete(order.id)}
                   disabled={isPending}
-                  className="flex-1 rounded-md bg-primary/15 py-1.5 text-xs font-semibold text-primary transition-colors hover:bg-primary/25 disabled:opacity-50"
+                  className="flex items-center justify-center rounded-md bg-red-500/10 px-2 py-1.5 text-red-500 transition-colors hover:bg-red-500/20 disabled:opacity-50"
                 >
-                  {nextLabel}
+                  <Trash2 size={16} />
                 </button>
-              )}
-              
-              {/* Botão de WhatsApp aparece se houver telefone */}
-              {order.customerPhone && (
-                <a
-                  href={`https://wa.me/55${order.customerPhone.replace(/\D/g, '')}?text=Olá, ${order.customerName}! Seu pedido #${order.code} está pronto.`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-center rounded-md bg-green-500/10 px-2 py-1.5 text-green-500 transition-colors hover:bg-green-500/20"
-                >
-                  <MessageCircle size={16} />
-                </a>
-              )}
-              
-              <button
-                onClick={() => handleDelete(order.id)}
-                disabled={isPending}
-                className="flex items-center justify-center rounded-md bg-red-500/10 px-2 py-1.5 text-red-500 transition-colors hover:bg-red-500/20 disabled:opacity-50"
-              >
-                <Trash2 size={16} />
-              </button>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
 
         {orders.length === 0 && (
           <p className="py-6 text-center text-xs text-foreground-subtle">Nenhum pedido</p>
