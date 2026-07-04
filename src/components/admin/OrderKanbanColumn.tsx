@@ -6,6 +6,8 @@ import { updateOrderStatusAction, deleteOrderAction } from "@/actions/order.acti
 import { useTransition } from "react";
 import { Trash2, MessageCircle } from "lucide-react";
 
+console.log("--- ESTOU LENDO O ARQUIVO CORRETO ---");
+
 export interface KanbanOrder {
   id: string;
   code: string;
