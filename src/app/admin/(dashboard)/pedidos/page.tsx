@@ -12,7 +12,11 @@ export default async function PedidosPage() {
     id: o.id,
     code: o.code,
     customerName: o.customerName,
-    customerPhone: o.customerPhone ?? undefined,
+    customerPhone: o.customerPhone,
+    // Corrigido para deliveryAddress conforme seu schema.prisma
+    customerAddress: o.deliveryAddress,
+    addressComplement: o.addressComplement ?? undefined,
+    neighborhood: o.neighborhood ?? undefined,
     status: o.status,
     total: Number(o.total),
     createdAt: o.createdAt.toISOString(),
@@ -21,7 +25,6 @@ export default async function PedidosPage() {
 
   return (
     <div className="flex gap-4 p-6 overflow-x-auto">
-      {/* Colunas do seu Kanban */}
       <OrderKanbanColumn 
         title="Pendentes" 
         status={OrderStatus.PENDING} 
