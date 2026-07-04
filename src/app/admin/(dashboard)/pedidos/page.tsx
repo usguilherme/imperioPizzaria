@@ -10,7 +10,7 @@ export interface KanbanOrder {
   id: string;
   code: string;
   customerName: string;
-  customerPhone?: string; // Campo incluído para o telefone[cite: 6]
+  customerPhone?: string;
   status: OrderStatus;
   total: number;
   createdAt: string;
@@ -26,7 +26,8 @@ interface OrderKanbanColumnProps {
   accentColor: string;
 }
 
-export function OrderKanbanColumn({
+// Removido o 'export' aqui para que o Next.js não tente tratá-lo como uma página
+function OrderKanbanColumn({
   title,
   orders,
   nextStatus,
@@ -98,7 +99,6 @@ export function OrderKanbanColumn({
                 </button>
               )}
               
-              {/* Comparação corrigida usando OrderStatus.READY e verificação de telefone[cite: 6] */}
               {order.status === OrderStatus.READY && order.customerPhone && (
                 <a
                   href={`https://wa.me/${order.customerPhone.replace(/\D/g, '')}?text=Olá, ${order.customerName}! Seu pedido #${order.code} está pronto.`}
@@ -128,4 +128,10 @@ export function OrderKanbanColumn({
       </div>
     </div>
   );
+}
+
+// Certifique-se de que aqui você tenha o export default da página principal
+export default function PedidosPage() {
+    // Lógica da sua página de pedidos aqui
+    return <div>Conteúdo da página</div>;
 }
