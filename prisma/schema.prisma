@@ -184,6 +184,9 @@ model Order {
 
   notes             String?       @db.Text
 
+  // NOVA COLUNA PARA IMPRESSÃO TÉRMICA
+  isPrinted         Boolean       @default(false)
+
   attendantId       String?
   attendant         User?         @relation(fields: [attendantId], references: [id])
 

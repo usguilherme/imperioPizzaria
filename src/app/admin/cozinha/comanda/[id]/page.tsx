@@ -10,11 +10,13 @@ const PAYMENT_LABELS: Record<string, string> = {
 };
 
 interface ComandaPageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 export default async function ComandaPage({ params }: ComandaPageProps) {
-  const order = await orderRepository.findById(params.id);
+  const { id } = await params;
+  const order = await orderRepository.findById(id);
+  
   if (!order) notFound();
 
   return (

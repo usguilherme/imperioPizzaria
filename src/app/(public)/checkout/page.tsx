@@ -32,6 +32,20 @@ export default function CheckoutPage() {
     e.preventDefault();
     setError(null);
 
+    // ==========================================
+    // 1. TRAVA ANTI-SPAM (COOLDOWN DE 5 MINUTOS)
+    // ==========================================
+    const lastOrderTime = localStorage.getItem("@imperio:lastOrderTime");
+    if (lastOrderTime) {
+      const timePassed = Date.now() - parseInt(lastOrderTime);
+      const fiveMinutes = 5 * 60 * 1000;
+      
+      if (timePassed < fiveMinutes) {
+        setError("Você acabou de fazer um pedido. Por favor, aguarde alguns minutos antes de fazer outro.");
+        return; // Impede a continuação da função
+      }
+    }
+
     if (items.length === 0) {
       setError("Seu carrinho está vazio.");
       return;
@@ -50,6 +64,11 @@ export default function CheckoutPage() {
         setError(result.error ?? "Erro ao finalizar pedido");
         return;
       }
+
+      // ==========================================
+      // 2. REGISTRA O HORÁRIO DO SUCESSO NO NAVEGADOR
+      // ==========================================
+      localStorage.setItem("@imperio:lastOrderTime", Date.now().toString());
 
       // ==========================================
       // LÓGICA DE MENSAGEM PARA O WHATSAPP
@@ -88,15 +107,12 @@ export default function CheckoutPage() {
         message += `\n*Observações:* ${form.notes}`;
       }
 
-      // O número de destino configurado (83 988738301)
       const targetPhone = "5583988738301";
       const encodedMessage = encodeURIComponent(message);
       const whatsappUrl = `https://wa.me/${targetPhone}?text=${encodedMessage}`;
 
-      // Abre o WhatsApp em uma nova aba
       window.open(whatsappUrl, '_blank');
 
-      // Limpa o carrinho e redireciona para a página de sucesso
       clearCart();
       router.push(`/pedido-confirmado?code=${result.code}`);
     });
