@@ -98,8 +98,8 @@ export function OrderKanbanColumn({
                 </button>
               )}
               
-              {/* Botão de WhatsApp */}
-              {order.status === OrderStatus.READY && order.customerPhone && (
+              {/* Botão de WhatsApp aparece se houver telefone, independente do status */}
+              {order.customerPhone && (
                 <a
                   href={`https://wa.me/55${order.customerPhone.replace(/\D/g, '')}?text=Olá, ${order.customerName}! Seu pedido #${order.code} está pronto.`}
                   target="_blank"
