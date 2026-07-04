@@ -7,14 +7,26 @@ import { formatCurrency } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
 import { createOrderAction } from "@/actions/order.actions";
 
-const DELIVERY_FEE = 6.9;
+// Tabela de fretes por bairro[cite: 8]
+const DELIVERY_FEES: Record<string, number> = {
+  "Centro": 3.00,
+  "Pintado": 7.00,
+  "Sitio": 15.00,
+  "Bela Vista": 5.00,
+};
 
 export default function CheckoutPage() {
   const router = useRouter();
   const { items, clearCart } = useCartStore();
   
+  // Estado para o bairro selecionado[cite: 8]
+  const [bairro, setBairro] = useState<string>("Centro");
+  
+  // Correção do erro de tipo usando ?? 0 para garantir um número[cite: 8]
+  const deliveryFee = DELIVERY_FEES[bairro] ?? 0;
+  
   const subtotal = items.reduce((total, item) => total + (item.price * item.quantity), 0);
-  const total = subtotal + DELIVERY_FEE;
+  const total = subtotal + deliveryFee;
 
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -32,9 +44,6 @@ export default function CheckoutPage() {
     e.preventDefault();
     setError(null);
 
-    // ==========================================
-    // 1. TRAVA ANTI-SPAM (COOLDOWN DE 5 MINUTOS)
-    // ==========================================
     const lastOrderTime = localStorage.getItem("@imperio:lastOrderTime");
     if (lastOrderTime) {
       const timePassed = Date.now() - parseInt(lastOrderTime);
@@ -42,7 +51,7 @@ export default function CheckoutPage() {
       
       if (timePassed < fiveMinutes) {
         setError("Você acabou de fazer um pedido. Por favor, aguarde alguns minutos antes de fazer outro.");
-        return; // Impede a continuação da função
+        return;
       }
     }
 
@@ -52,10 +61,12 @@ export default function CheckoutPage() {
     }
 
     startTransition(async () => {
+      // Enviando o valor calculado dinamicamente e o bairro[cite: 8]
       const result = await createOrderAction(
         {
           ...form,
-          deliveryFee: DELIVERY_FEE,
+          deliveryFee,
+          neighborhood: bairro,
         },
         items 
       );
@@ -65,14 +76,8 @@ export default function CheckoutPage() {
         return;
       }
 
-      // ==========================================
-      // 2. REGISTRA O HORÁRIO DO SUCESSO NO NAVEGADOR
-      // ==========================================
       localStorage.setItem("@imperio:lastOrderTime", Date.now().toString());
 
-      // ==========================================
-      // LÓGICA DE MENSAGEM PARA O WHATSAPP
-      // ==========================================
       const paymentMap = {
         PIX: "Pix",
         CREDIT_CARD: "Cartão de Crédito",
@@ -83,6 +88,7 @@ export default function CheckoutPage() {
       let message = `*NOVO PEDIDO!* 🛵\n\n`;
       message += `*Cliente:* ${form.customerName}\n`;
       message += `*Telefone:* ${form.customerPhone}\n`;
+      message += `*Bairro:* ${bairro}\n`;
       message += `*Endereço:* ${form.deliveryAddress}${form.addressComplement ? `, ${form.addressComplement}` : ''}\n`;
       message += `*Pagamento:* ${paymentMap[form.paymentMethod]}\n\n`;
 
@@ -100,7 +106,7 @@ export default function CheckoutPage() {
       });
 
       message += `\n*Subtotal:* ${formatCurrency(subtotal)}\n`;
-      message += `*Taxa de entrega:* ${formatCurrency(DELIVERY_FEE)}\n`;
+      message += `*Taxa de entrega:* ${formatCurrency(deliveryFee)}\n`;
       message += `*TOTAL:* ${formatCurrency(total)}\n`;
 
       if (form.notes) {
@@ -129,55 +135,27 @@ export default function CheckoutPage() {
           </div>
         )}
 
-        <input
-          required
-          placeholder="Nome completo"
-          value={form.customerName}
-          onChange={(e) => setForm({ ...form, customerName: e.target.value })}
-          className="w-full rounded-lg border border-border bg-background-surface px-3 py-2 text-foreground focus:border-primary focus:outline-none"
-        />
+        <input required placeholder="Nome completo" value={form.customerName} onChange={(e) => setForm({ ...form, customerName: e.target.value })} className="w-full rounded-lg border border-border bg-background-surface px-3 py-2 text-foreground focus:border-primary focus:outline-none" />
+        <input required placeholder="Telefone / WhatsApp" value={form.customerPhone} onChange={(e) => setForm({ ...form, customerPhone: e.target.value })} className="w-full rounded-lg border border-border bg-background-surface px-3 py-2 text-foreground focus:border-primary focus:outline-none" />
 
-        <input
-          required
-          placeholder="Telefone / WhatsApp"
-          value={form.customerPhone}
-          onChange={(e) => setForm({ ...form, customerPhone: e.target.value })}
-          className="w-full rounded-lg border border-border bg-background-surface px-3 py-2 text-foreground focus:border-primary focus:outline-none"
-        />
+        {/* Seletor de Bairro[cite: 8] */}
+        <select value={bairro} onChange={(e) => setBairro(e.target.value)} className="w-full rounded-lg border border-border bg-background-surface px-3 py-2 text-foreground focus:border-primary focus:outline-none">
+          {Object.keys(DELIVERY_FEES).map((b) => (
+            <option key={b} value={b}>{b}</option>
+          ))}
+        </select>
 
-        <input
-          required
-          placeholder="Endereço de entrega"
-          value={form.deliveryAddress}
-          onChange={(e) => setForm({ ...form, deliveryAddress: e.target.value })}
-          className="w-full rounded-lg border border-border bg-background-surface px-3 py-2 text-foreground focus:border-primary focus:outline-none"
-        />
+        <input required placeholder="Endereço de entrega" value={form.deliveryAddress} onChange={(e) => setForm({ ...form, deliveryAddress: e.target.value })} className="w-full rounded-lg border border-border bg-background-surface px-3 py-2 text-foreground focus:border-primary focus:outline-none" />
+        <input placeholder="Complemento (opcional)" value={form.addressComplement} onChange={(e) => setForm({ ...form, addressComplement: e.target.value })} className="w-full rounded-lg border border-border bg-background-surface px-3 py-2 text-foreground focus:border-primary focus:outline-none" />
 
-        <input
-          placeholder="Complemento (opcional)"
-          value={form.addressComplement}
-          onChange={(e) => setForm({ ...form, addressComplement: e.target.value })}
-          className="w-full rounded-lg border border-border bg-background-surface px-3 py-2 text-foreground focus:border-primary focus:outline-none"
-        />
-
-        <select
-          value={form.paymentMethod}
-          onChange={(e) => setForm({ ...form, paymentMethod: e.target.value as typeof form.paymentMethod })}
-          className="w-full rounded-lg border border-border bg-background-surface px-3 py-2 text-foreground focus:border-primary focus:outline-none"
-        >
+        <select value={form.paymentMethod} onChange={(e) => setForm({ ...form, paymentMethod: e.target.value as typeof form.paymentMethod })} className="w-full rounded-lg border border-border bg-background-surface px-3 py-2 text-foreground focus:border-primary focus:outline-none">
           <option value="PIX">Pix</option>
           <option value="CREDIT_CARD">Cartão de Crédito</option>
           <option value="DEBIT_CARD">Cartão de Débito</option>
           <option value="CASH">Dinheiro</option>
         </select>
 
-        <textarea
-          placeholder="Observações do pedido (opcional)"
-          value={form.notes}
-          onChange={(e) => setForm({ ...form, notes: e.target.value })}
-          rows={2}
-          className="w-full rounded-lg border border-border bg-background-surface px-3 py-2 text-foreground focus:border-primary focus:outline-none"
-        />
+        <textarea placeholder="Observações do pedido (opcional)" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} className="w-full rounded-lg border border-border bg-background-surface px-3 py-2 text-foreground focus:border-primary focus:outline-none" />
 
         <div className="space-y-1 border-t border-border pt-4">
           <div className="flex justify-between text-sm text-foreground-muted">
@@ -185,8 +163,8 @@ export default function CheckoutPage() {
             <span>{formatCurrency(subtotal)}</span>
           </div>
           <div className="flex justify-between text-sm text-foreground-muted">
-            <span>Taxa de entrega</span>
-            <span>{formatCurrency(DELIVERY_FEE)}</span>
+            <span>Taxa de entrega ({bairro})</span>
+            <span>{formatCurrency(deliveryFee)}</span>
           </div>
           <div className="flex justify-between font-display text-lg font-bold text-primary">
             <span>Total</span>

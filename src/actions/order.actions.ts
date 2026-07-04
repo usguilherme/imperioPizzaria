@@ -14,6 +14,7 @@ interface CheckoutData {
   paymentMethod: PaymentMethod;
   notes?: string;
   deliveryFee: number;
+  neighborhood: string; // Adicionado: campo necessário para o frete dinâmico
 }
 
 export async function createOrderAction(checkoutData: CheckoutData, cartItems: CartItem[]) {
@@ -66,6 +67,7 @@ export async function createOrderAction(checkoutData: CheckoutData, cartItems: C
           subtotal,
           deliveryFee,
           total,
+          neighborhood: checkoutData.neighborhood, // Salvando o bairro no banco
         },
       });
 
@@ -92,12 +94,10 @@ export async function createOrderAction(checkoutData: CheckoutData, cartItems: C
           }
         }
 
-        // Lógica de sabores de pizza com tipagem blindada
         if (item.sizeId && item.flavors && item.flavors.length > 0) {
           const flavorOne = item.flavors[0];
           const flavorTwo = item.flavors[1];
           
-          // Checagem explícita para o TypeScript entender que o objeto e o ID existem
           if (flavorOne && flavorOne.id) {
             await tx.pizzaFlavorCombination.create({
               data: {
