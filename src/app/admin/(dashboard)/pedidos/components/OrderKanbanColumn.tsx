@@ -11,7 +11,7 @@ export interface KanbanOrder {
   code: string;
   customerName: string;
   customerPhone?: string;
-  customerAddress?: string; // Adicionado para exibir no modal
+  customerAddress?: string;
   status: OrderStatus;
   total: number;
   createdAt: string;
@@ -95,6 +95,20 @@ export function OrderKanbanColumn({
                     {nextLabel}
                   </button>
                 )}
+                
+                {/* Botão WhatsApp no Card */}
+                {order.customerPhone && (
+                  <a
+                    href={`https://wa.me/55${order.customerPhone.replace(/\D/g, '')}?text=Olá, ${order.customerName}! Seu pedido #${order.code} está pronto.`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="flex items-center justify-center rounded-md bg-green-500/10 px-2 py-1.5 text-green-500 hover:bg-green-500/20"
+                  >
+                    <MessageCircle size={16} />
+                  </a>
+                )}
+
                 <button
                   onClick={(e) => handleDelete(e, order.id)}
                   className="flex items-center justify-center rounded-md bg-red-500/10 px-2 py-1.5 text-red-500 hover:bg-red-500/20"
@@ -109,8 +123,8 @@ export function OrderKanbanColumn({
 
       {/* Modal de Detalhes */}
       {selectedOrder && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="w-full max-w-md rounded-lg bg-background-surface border border-border p-6 shadow-xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setSelectedOrder(null)}>
+          <div className="w-full max-w-md rounded-lg bg-background-surface border border-border p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-bold">Pedido {selectedOrder.code}</h2>
               <button onClick={() => setSelectedOrder(null)}><X size={20}/></button>
@@ -120,6 +134,18 @@ export function OrderKanbanColumn({
               <p><strong>Telefone:</strong> {selectedOrder.customerPhone || "N/A"}</p>
               <p><strong>Endereço:</strong> {selectedOrder.customerAddress || "Não informado"}</p>
               <p><strong>Total:</strong> {formatCurrency(selectedOrder.total)}</p>
+              
+              {/* Botão WhatsApp no Modal */}
+              {selectedOrder.customerPhone && (
+                <a
+                  href={`https://wa.me/55${selectedOrder.customerPhone.replace(/\D/g, '')}?text=Olá, ${selectedOrder.customerName}! Seu pedido #${selectedOrder.code} está pronto.`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex w-full items-center justify-center gap-2 rounded-md bg-green-500/10 py-2 text-green-500 hover:bg-green-500/20"
+                >
+                  <MessageCircle size={16} /> Falar com cliente
+                </a>
+              )}
             </div>
           </div>
         </div>
