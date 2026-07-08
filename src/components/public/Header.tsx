@@ -5,13 +5,11 @@ import { Search, User, ShoppingCart, Crown } from "lucide-react";
 import { useCartStore } from "@/store/cart.store";
 import { useEffect, useState } from "react";
 
-// Adicionamos um estado para carregar as categorias dinamicamente
 export function Header() {
   const itemsCount = useCartStore((state) => state.getTotalItems());
   const [categories, setCategories] = useState<{ name: string; slug: string }[]>([]);
 
   useEffect(() => {
-    // Buscamos as categorias ativas do seu banco
     fetch("/api/categories")
       .then((res) => res.json())
       .then((data) => setCategories(data))
@@ -37,13 +35,13 @@ export function Header() {
           />
         </div>
 
-        {/* Categorias Dinâmicas com Scroll Horizontal se ficarem muitas */}
-        <nav className="hidden lg:flex items-center gap-5 overflow-x-auto max-w-[400px] scrollbar-hide">
+        {/* Categorias com design moderno e scroll suave */}
+        <nav className="hidden lg:flex items-center gap-6 overflow-x-auto max-w-[500px] scroll-smooth [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {categories.map((cat) => (
             <Link
               key={cat.slug}
               href={`/#${cat.slug}`}
-              className="text-sm font-medium text-foreground-muted transition-colors hover:text-accent whitespace-nowrap"
+              className="text-sm font-medium text-foreground-muted transition-all duration-300 hover:text-primary whitespace-nowrap px-3 py-1.5 rounded-full hover:bg-primary/10"
             >
               {cat.name}
             </Link>
