@@ -10,7 +10,8 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
   const [product, categories, sizes] = await Promise.all([
     prisma.product.findUnique({ 
       where: { id: params.id },
-      include: { availableSizes: true } 
+      // 1. AVISAMOS O PRISMA PARA TRAZER OS ADICIONAIS
+      include: { availableSizes: true, addons: true } 
     }),
     prisma.category.findMany({ where: { isActive: true }, orderBy: { order: "asc" } }),
     prisma.pizzaSize.findMany({ where: { isActive: true } })
@@ -36,7 +37,12 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
           isPromoActive: product.isPromoActive,
           isFlavorEligible: product.isFlavorEligible,
           categoryId: product.categoryId,
-          availableSizes: product.availableSizes, // Passando os tamanhos atuais do produto
+          availableSizes: product.availableSizes, 
+          // 2. PASSAMOS OS ADICIONAIS PARA O FORMULÁRIO PREENCHER A TELA
+          addons: product.addons.map((a) => ({
+            name: a.name,
+            price: Number(a.price),
+          })),
         }}
       />
     </div>
