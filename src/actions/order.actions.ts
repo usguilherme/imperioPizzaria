@@ -14,7 +14,7 @@ interface CheckoutData {
   paymentMethod: PaymentMethod;
   notes?: string;
   deliveryFee: number;
-  neighborhood: string; // Adicionado: campo necessário para o frete dinâmico
+  neighborhood: string; 
 }
 
 export async function createOrderAction(checkoutData: CheckoutData, cartItems: CartItem[]) {
@@ -36,7 +36,8 @@ export async function createOrderAction(checkoutData: CheckoutData, cartItems: C
           basePrice = Number(product.promoPrice || product.originalPrice);
         }
 
-        const addonsPrice = item.selectedAddons?.reduce((acc, a) => acc + a.price, 0) || 0;
+        // Garante que o valor dos adicionais seja somado corretamente
+        const addonsPrice = item.selectedAddons?.reduce((acc, a) => acc + Number(a.price), 0) || 0;
         const finalUnitPrice = basePrice + addonsPrice;
         const itemTotal = finalUnitPrice * item.quantity;
         
@@ -67,7 +68,7 @@ export async function createOrderAction(checkoutData: CheckoutData, cartItems: C
           subtotal,
           deliveryFee,
           total,
-          neighborhood: checkoutData.neighborhood, // Salvando o bairro no banco
+          neighborhood: checkoutData.neighborhood,
         },
       });
 
@@ -82,13 +83,14 @@ export async function createOrderAction(checkoutData: CheckoutData, cartItems: C
           },
         });
 
+        // SALVA OS ADICIONAIS NO BANCO DE DADOS
         if (item.selectedAddons && item.selectedAddons.length > 0) {
           for (const addon of item.selectedAddons) {
             await tx.orderItemAddon.create({
               data: {
                 orderItemId: orderItem.id,
                 name: addon.name,
-                price: addon.price
+                price: Number(addon.price)
               }
             });
           }

@@ -34,11 +34,14 @@ interface CartStore {
   removeItem: (id: string) => void;
   updateQuantity: (id: string, quantity: number) => void;
   clearCart: () => void;
+  // Funções adicionadas para calcular os totais
+  getTotalItems: () => number;
+  getTotalPrice: () => number;
 }
 
 export const useCartStore = create<CartStore>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       items: [],
       
       addItem: (item) =>
@@ -70,6 +73,24 @@ export const useCartStore = create<CartStore>()(
         })),
 
       clearCart: () => set({ items: [] }),
+
+      // Pega a quantidade total de itens no carrinho
+      getTotalItems: () => {
+        return get().items.reduce((total, item) => total + item.quantity, 0);
+      },
+
+      // Calcula o valor total, SOMANDO OS ADICIONAIS escolhidos
+      getTotalPrice: () => {
+        return get().items.reduce((total, item) => {
+          // 1. Calcula o valor dos adicionais deste item específico (se houver)
+          const addonsPrice = item.selectedAddons?.reduce((sum, addon) => sum + Number(addon.price), 0) || 0;
+          
+          // 2. (Preço do produto + preço dos adicionais) * quantidade
+          const itemTotal = (Number(item.price) + addonsPrice) * item.quantity;
+          
+          return total + itemTotal;
+        }, 0);
+      },
     }),
     {
       name: "imperio-cart-storage",

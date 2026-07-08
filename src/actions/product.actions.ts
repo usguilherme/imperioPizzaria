@@ -3,8 +3,6 @@
 import { prisma as db } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 
-// --- FUNÇÕES EXISTENTES (RECUPERADAS) ---
-
 export async function deleteProductAction(id: string) {
   try {
     await db.product.delete({ where: { id } });
@@ -27,8 +25,6 @@ export async function toggleProductAvailabilityAction(id: string, isAvailable: b
     return { success: false, error: "Erro ao atualizar disponibilidade" };
   }
 }
-
-// --- FUNÇÕES DE PRODUTO E ADDONS (NOVAS) ---
 
 export async function createProductAction(data: any) {
   try {
@@ -58,6 +54,7 @@ export async function updateProductAction(id: string, data: any) {
   try {
     const { addons, availableSizeIds, ...productData } = data;
 
+    // Limpa os adicionais antigos deste produto antes de salvar os novos editados
     await db.addon.deleteMany({ where: { productId: id } });
 
     const product = await db.product.update({
@@ -65,7 +62,7 @@ export async function updateProductAction(id: string, data: any) {
       data: {
         ...productData,
         availableSizes: {
-          set: availableSizeIds.map((id: string) => ({ id })),
+          set: availableSizeIds?.map((sizeId: string) => ({ id: sizeId })) || [],
         },
         addons: addons?.length > 0 
           ? { create: addons } 

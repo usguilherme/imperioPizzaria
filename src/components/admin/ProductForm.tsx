@@ -230,6 +230,7 @@ export function ProductForm({ categories, availableSizes, initialData }: Product
         </div>
       </div>
 
+      {/* SEÇÃO DE ADICIONAIS AQUI */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <label className="block text-sm font-medium text-foreground-muted">Adicionais</label>
@@ -244,13 +245,16 @@ export function ProductForm({ categories, availableSizes, initialData }: Product
               value={addon.name} 
               onChange={(e) => updateAddon(index, 'name', e.target.value)}
               className="flex-1 rounded-lg border border-border bg-background-surface px-3 py-2 text-sm"
+              required
             />
             <input 
               type="number" 
               placeholder="Preço" 
+              step="0.01"
               value={addon.price} 
               onChange={(e) => updateAddon(index, 'price', Number(e.target.value))}
               className="w-24 rounded-lg border border-border bg-background-surface px-3 py-2 text-sm"
+              required
             />
             <Button type="button" variant="ghost" className="text-red-500" onClick={() => removeAddon(index)}>
               <Trash2 size={16} />

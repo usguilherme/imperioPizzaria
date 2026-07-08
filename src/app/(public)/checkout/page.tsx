@@ -7,7 +7,7 @@ import { formatCurrency } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
 import { createOrderAction } from "@/actions/order.actions";
 
-// Tabela de fretes por bairro[cite: 8]
+// Tabela de fretes por bairro
 const DELIVERY_FEES: Record<string, number> = {
   "Centro": 3.00,
   "Pintado": 7.00,
@@ -17,15 +17,15 @@ const DELIVERY_FEES: Record<string, number> = {
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { items, clearCart } = useCartStore();
   
-  // Estado para o bairro selecionado[cite: 8]
+  // Puxando a função getTotalPrice que sabe somar os adicionais perfeitamente
+  const { items, clearCart, getTotalPrice } = useCartStore();
+  
   const [bairro, setBairro] = useState<string>("Centro");
-  
-  // Correção do erro de tipo usando ?? 0 para garantir um número[cite: 8]
   const deliveryFee = DELIVERY_FEES[bairro] ?? 0;
   
-  const subtotal = items.reduce((total, item) => total + (item.price * item.quantity), 0);
+  // O subtotal agora é calculado pelo store (cérebro) do carrinho
+  const subtotal = getTotalPrice();
   const total = subtotal + deliveryFee;
 
   const [isPending, startTransition] = useTransition();
@@ -61,7 +61,6 @@ export default function CheckoutPage() {
     }
 
     startTransition(async () => {
-      // Enviando o valor calculado dinamicamente e o bairro[cite: 8]
       const result = await createOrderAction(
         {
           ...form,
@@ -94,7 +93,11 @@ export default function CheckoutPage() {
 
       message += `*PEDIDO:*\n`;
       items.forEach((item) => {
-        message += `• ${item.quantity}x ${item.name} - ${formatCurrency(item.price * item.quantity)}\n`;
+        // Cálculo do valor do item no wpp considerando os adicionais
+        const addonsPrice = item.selectedAddons?.reduce((acc, a) => acc + Number(a.price), 0) || 0;
+        const finalItemPrice = (Number(item.price) + addonsPrice) * item.quantity;
+
+        message += `• ${item.quantity}x ${item.name} - ${formatCurrency(finalItemPrice)}\n`;
         
         if (item.flavors && item.flavors.length > 0) {
           message += `   Sabores: ${item.flavors.map(f => f.name).join(" e ")}\n`;
@@ -128,6 +131,46 @@ export default function CheckoutPage() {
     <div className="mx-auto max-w-2xl px-4 py-8">
       <h1 className="mb-6 font-display text-2xl font-bold text-foreground">Checkout</h1>
 
+      {/* NOVIDADE: Resumo visual do pedido para o cliente ver o Bacon e Cheddar */}
+      {items.length > 0 && (
+        <div className="mb-6 space-y-3 rounded-lg border border-border bg-background-surface p-4">
+          <h2 className="text-sm font-semibold text-foreground-muted uppercase tracking-wider">Resumo do Pedido</h2>
+          
+          <div className="space-y-3 divide-y divide-border/50">
+            {items.map((item, idx) => {
+              const addonsPrice = item.selectedAddons?.reduce((acc, a) => acc + Number(a.price), 0) || 0;
+              const itemTotal = (Number(item.price) + addonsPrice) * item.quantity;
+
+              return (
+                <div key={item.id || idx} className="pt-3 first:pt-0">
+                  <div className="flex justify-between text-sm">
+                    <span className="font-medium text-foreground">{item.quantity}x {item.name}</span>
+                    <span className="font-medium text-foreground">{formatCurrency(itemTotal)}</span>
+                  </div>
+
+                  {item.flavors && item.flavors.length > 0 && (
+                    <p className="text-xs text-foreground-muted mt-1">
+                      Pizza: {item.flavors.map(f => f.name).join(" e ")}
+                    </p>
+                  )}
+
+                  {/* Listagem visual dos adicionais */}
+                  {item.selectedAddons && item.selectedAddons.length > 0 && (
+                    <div className="mt-1 flex flex-col gap-0.5">
+                      {item.selectedAddons.map((addon, i) => (
+                        <span key={i} className="text-xs text-foreground-muted">
+                          + {addon.name} ({formatCurrency(Number(addon.price))})
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && (
           <div className="rounded-lg bg-red-900/20 border border-red-900/40 p-3 text-sm text-red-400">
@@ -138,7 +181,7 @@ export default function CheckoutPage() {
         <input required placeholder="Nome completo" value={form.customerName} onChange={(e) => setForm({ ...form, customerName: e.target.value })} className="w-full rounded-lg border border-border bg-background-surface px-3 py-2 text-foreground focus:border-primary focus:outline-none" />
         <input required placeholder="Telefone / WhatsApp" value={form.customerPhone} onChange={(e) => setForm({ ...form, customerPhone: e.target.value })} className="w-full rounded-lg border border-border bg-background-surface px-3 py-2 text-foreground focus:border-primary focus:outline-none" />
 
-        {/* Seletor de Bairro[cite: 8] */}
+        {/* Seletor de Bairro */}
         <select value={bairro} onChange={(e) => setBairro(e.target.value)} className="w-full rounded-lg border border-border bg-background-surface px-3 py-2 text-foreground focus:border-primary focus:outline-none">
           {Object.keys(DELIVERY_FEES).map((b) => (
             <option key={b} value={b}>{b}</option>

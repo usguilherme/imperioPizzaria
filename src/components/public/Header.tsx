@@ -12,7 +12,8 @@ const CATEGORIES = [
 ];
 
 export function Header() {
-  const itemsCount = useCartStore((state) => state.items.length);
+  // Puxando a função correta que conta o total real de lanches e pizzas
+  const itemsCount = useCartStore((state) => state.getTotalItems());
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur">
