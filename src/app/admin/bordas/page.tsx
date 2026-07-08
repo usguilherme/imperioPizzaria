@@ -2,6 +2,8 @@ import { prisma } from "@/lib/prisma";
 import { createCrustAction } from "@/actions/crust.actions";
 import { Button } from "@/components/ui/Button";
 import { CrustItem } from "./CrustItem";
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 
 export default async function BordasPage() {
   const crusts = await prisma.pizzaCrust.findMany({
@@ -10,6 +12,15 @@ export default async function BordasPage() {
 
   return (
     <div className="max-w-2xl">
+      {/* BOTÃO DE VOLTAR ADICIONADO AQUI */}
+      <Link
+        href="/admin"
+        className="mb-6 flex w-fit items-center gap-2 text-sm text-foreground-muted transition-colors hover:text-primary"
+      >
+        <ArrowLeft size={16} />
+        Voltar para o Dashboard
+      </Link>
+
       <h1 className="mb-6 font-display text-2xl font-bold text-foreground">Gerenciar Bordas</h1>
 
       <div className="mb-8 rounded-lg border border-border bg-background-surface p-4">
