@@ -38,7 +38,7 @@ export default async function HomePage() {
           </h2>
           <ProductGrid
             flavorOptions={flavorOptions}
-            products={promoProducts.map((p) => ({
+            products={promoProducts.map((p: any) => ({
               id: p.id,
               title: p.title,
               description: p.description,
@@ -48,6 +48,8 @@ export default async function HomePage() {
               promoPrice: p.promoPrice != null ? Number(p.promoPrice) : null,
               isPromoActive: p.isPromoActive,
               isPizza: p.type === "PIZZA",
+              // PUXANDO OS ADICIONAIS AQUI
+              addons: p.addons ? p.addons.map((a: any) => ({ name: a.name, price: Number(a.price) })) : [],
             }))}
           />
         </section>
@@ -64,7 +66,7 @@ export default async function HomePage() {
             </h2>
             <ProductGrid
               flavorOptions={flavorOptions}
-              products={items.map((p) => ({
+              products={items.map((p: any) => ({
                 id: p.id,
                 title: p.title,
                 description: p.description,
@@ -74,6 +76,8 @@ export default async function HomePage() {
                 promoPrice: p.promoPrice != null ? Number(p.promoPrice) : null,
                 isPromoActive: p.isPromoActive,
                 isPizza: p.type === "PIZZA",
+                // PUXANDO OS ADICIONAIS AQUI TAMBÉM
+                addons: p.addons ? p.addons.map((a: any) => ({ name: a.name, price: Number(a.price) })) : [],
               }))}
             />
           </section>

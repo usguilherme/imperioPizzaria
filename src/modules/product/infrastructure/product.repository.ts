@@ -67,13 +67,13 @@ export class ProductRepository {
   async findById(id: string) {
     return prisma.product.findUnique({
       where: { id },
-      include: { category: true, availableSizes: true },
+      include: { category: true, availableSizes: true, addons: true },
     });
   }
 
   async findAll() {
     return prisma.product.findMany({
-      include: { category: true, availableSizes: true },
+      include: { category: true, availableSizes: true, addons: true },
       orderBy: { createdAt: "desc" },
     });
   }
@@ -95,7 +95,7 @@ export class ProductRepository {
       include: {
         products: {
           where: { isAvailable: true },
-          include: { availableSizes: true },
+          include: { availableSizes: true, addons: true },
           orderBy: { title: "asc" },
         },
       },
