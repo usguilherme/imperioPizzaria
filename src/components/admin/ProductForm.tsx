@@ -1,5 +1,5 @@
 "use client";
-
+import imageCompression from 'browser-image-compression';
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -88,30 +88,37 @@ export function ProductForm({ categories, availableSizes, initialData }: Product
   };
 
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+      const file = e.target.files?.[0];
+      if (!file) return;
 
-    if (!file.type.startsWith("image/")) {
-      setError("Selecione um arquivo de imagem válido (jpg, png, webp...)");
-      return;
-    }
+      if (!file.type.startsWith("image/")) {
+        setError("Selecione um arquivo de imagem válido (jpg, png, webp...)");
+        return;
+      }
 
-    if (file.size > MAX_IMAGE_SIZE_MB * 1024 * 1024) {
-      setError(`A imagem deve ter no máximo ${MAX_IMAGE_SIZE_MB}MB`);
-      return;
-    }
+      if (file.size > MAX_IMAGE_SIZE_MB * 1024 * 1024) {
+        setError(`A imagem deve ter no máximo ${MAX_IMAGE_SIZE_MB}MB`);
+        return;
+      }
 
-    setError(null);
-    setIsProcessingImage(true);
-    try {
-      const base64 = await fileToBase64(file);
-      setForm((prev) => ({ ...prev, imageUrl: base64 }));
-    } catch {
-      setError("Não foi possível carregar essa imagem, tente outro arquivo");
-    } finally {
-      setIsProcessingImage(false);
-    }
-  };
+      setError(null);
+      setIsProcessingImage(true);
+      try {
+        // Comprime a imagem no navegador antes de converter para Base64
+        const compressedFile = await imageCompression(file, {
+          maxSizeMB: 0.8,
+          maxWidthOrHeight: 1000,
+          useWebWorker: true,
+        });
+        
+        const base64 = await fileToBase64(compressedFile);
+        setForm((prev) => ({ ...prev, imageUrl: base64 }));
+      } catch {
+        setError("Não foi possível processar essa imagem, tente outro arquivo");
+      } finally {
+        setIsProcessingImage(false);
+      }
+    };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

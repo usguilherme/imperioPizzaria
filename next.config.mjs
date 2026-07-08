@@ -4,13 +4,13 @@ const nextConfig = {
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "**", // ajuste para o domínio do seu bucket/CDN em produção
+        hostname: "**",
       },
     ],
   },
   experimental: {
     serverActions: {
-      bodySizeLimit: "10mb", // upload de imagens de produto via Server Action
+      bodySizeLimit: "10mb",
     },
   },
 };
