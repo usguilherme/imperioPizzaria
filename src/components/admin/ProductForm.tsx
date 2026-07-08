@@ -18,14 +18,22 @@ interface SizeOption {
   name: string;
 }
 
+// NOVA INTERFACE PARA BORDAS
+interface CrustOption {
+  id: string;
+  name: string;
+}
+
 type Addon = { name: string; price: number };
 
 interface ProductFormProps {
   categories: CategoryOption[];
   availableSizes: SizeOption[];
+  availableCrusts: CrustOption[]; // ADICIONADO AQUI
   initialData?: ProductSchemaInput & { 
     id: string; 
     availableSizes?: { id: string }[];
+    availableCrusts?: { id: string }[]; // ADICIONADO AQUI
     addons?: Addon[];
   };
 }
@@ -41,7 +49,7 @@ function fileToBase64(file: File): Promise<string> {
   });
 }
 
-export function ProductForm({ categories, availableSizes, initialData }: ProductFormProps) {
+export function ProductForm({ categories, availableSizes, availableCrusts, initialData }: ProductFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -59,6 +67,7 @@ export function ProductForm({ categories, availableSizes, initialData }: Product
     isFlavorEligible: initialData?.isFlavorEligible ?? false,
     categoryId: initialData?.categoryId ?? categories[0]?.id ?? "",
     availableSizeIds: initialData?.availableSizes?.map(s => s.id) ?? [],
+    availableCrustIds: initialData?.availableCrusts?.map(c => c.id) ?? [], // ADICIONADO AQUI
     addons: (initialData?.addons ?? []) as Addon[]
   });
 
@@ -104,7 +113,6 @@ export function ProductForm({ categories, availableSizes, initialData }: Product
       setError(null);
       setIsProcessingImage(true);
       try {
-        // Comprime a imagem no navegador antes de converter para Base64
         const compressedFile = await imageCompression(file, {
           maxSizeMB: 0.8,
           maxWidthOrHeight: 1000,
@@ -237,7 +245,29 @@ export function ProductForm({ categories, availableSizes, initialData }: Product
         </div>
       </div>
 
-      {/* SEÇÃO DE ADICIONAIS AQUI */}
+      {/* NOVA SEÇÃO DE BORDAS AQUI */}
+      <div className="space-y-2">
+        <label className="block text-sm font-medium text-foreground-muted">Bordas Disponíveis</label>
+        <div className="flex flex-wrap gap-4 rounded-lg border border-border p-3">
+          {availableCrusts?.map((crust) => (
+            <label key={crust.id} className="flex items-center gap-2 text-sm text-foreground">
+              <input
+                type="checkbox"
+                className="accent-primary"
+                checked={form.availableCrustIds.includes(crust.id)}
+                onChange={(e) => {
+                  const newIds = e.target.checked
+                    ? [...form.availableCrustIds, crust.id]
+                    : form.availableCrustIds.filter((id) => id !== crust.id);
+                  setForm({ ...form, availableCrustIds: newIds });
+                }}
+              />
+              {crust.name}
+            </label>
+          ))}
+        </div>
+      </div>
+
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <label className="block text-sm font-medium text-foreground-muted">Adicionais</label>

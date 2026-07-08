@@ -28,7 +28,8 @@ export async function toggleProductAvailabilityAction(id: string, isAvailable: b
 
 export async function createProductAction(data: any) {
   try {
-    const { addons, availableSizeIds, ...productData } = data;
+    // Extraímos os IDs das bordas também
+    const { addons, availableSizeIds, availableCrustIds, ...productData } = data;
 
     const product = await db.product.create({
       data: {
@@ -36,6 +37,9 @@ export async function createProductAction(data: any) {
         availableSizes: availableSizeIds?.length > 0 
           ? { connect: availableSizeIds.map((id: string) => ({ id })) } 
           : undefined,
+        availableCrusts: availableCrustIds?.length > 0 
+          ? { connect: availableCrustIds.map((id: string) => ({ id })) } 
+          : undefined, // LÓGICA DE BORDAS ADICIONADA AQUI
         addons: addons?.length > 0 
           ? { create: addons } 
           : undefined,
@@ -52,7 +56,8 @@ export async function createProductAction(data: any) {
 
 export async function updateProductAction(id: string, data: any) {
   try {
-    const { addons, availableSizeIds, ...productData } = data;
+    // Extraímos os IDs das bordas também
+    const { addons, availableSizeIds, availableCrustIds, ...productData } = data;
 
     // Limpa os adicionais antigos deste produto antes de salvar os novos editados
     await db.addon.deleteMany({ where: { productId: id } });
@@ -64,6 +69,9 @@ export async function updateProductAction(id: string, data: any) {
         availableSizes: {
           set: availableSizeIds?.map((sizeId: string) => ({ id: sizeId })) || [],
         },
+        availableCrusts: {
+          set: availableCrustIds?.map((crustId: string) => ({ id: crustId })) || [],
+        }, // LÓGICA DE BORDAS ADICIONADA AQUI
         addons: addons?.length > 0 
           ? { create: addons } 
           : undefined,

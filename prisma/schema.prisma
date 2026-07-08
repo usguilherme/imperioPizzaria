@@ -63,13 +63,13 @@ model User {
 // ==========================================
 
 model Category {
-  id       String  @id @default(cuid())
-  name     String
-  slug     String  @unique
-  order    Int     @default(0)
-  isActive Boolean @default(true)
+  id        String  @id @default(cuid())
+  name      String
+  slug      String  @unique
+  order     Int     @default(0)
+  isActive  Boolean @default(true)
 
-  products Product[]
+  products  Product[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -102,6 +102,7 @@ model Product {
   flavorOne        PizzaFlavorCombination[] @relation("FlavorOne")
   flavorTwo        PizzaFlavorCombination[] @relation("FlavorTwo")
   availableSizes   PizzaSize[] @relation("ProductSizes")
+  availableCrusts  PizzaCrust[] @relation("ProductCrusts") // BORDAS ADICIONADAS AQUI
 
   createdAt        DateTime    @default(now())
   updatedAt        DateTime    @updatedAt
@@ -141,7 +142,26 @@ model PizzaSize {
 }
 
 // ==========================================
-// LÓGICA DE PIZZA 2 SABORES E TAMANHOS
+// BORDAS DE PIZZA
+// ==========================================
+
+model PizzaCrust {
+  id          String   @id @default(cuid())
+  name        String
+  price       Decimal  @db.Decimal(10, 2)
+  isActive    Boolean  @default(true)
+
+  pizzaCombinations PizzaFlavorCombination[]
+  products          Product[] @relation("ProductCrusts")
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("pizza_crusts")
+}
+
+// ==========================================
+// LÓGICA DE PIZZA 2 SABORES, TAMANHOS E BORDAS
 // ==========================================
 
 model PizzaFlavorCombination {
@@ -158,6 +178,9 @@ model PizzaFlavorCombination {
 
   flavorTwoId String?
   flavorTwo   Product?  @relation("FlavorTwo", fields: [flavorTwoId], references: [id])
+
+  crustId     String?
+  crust       PizzaCrust? @relation(fields: [crustId], references: [id]) // RELAÇÃO COM A BORDA NO PEDIDO
 
   @@map("pizza_flavor_combinations")
 }

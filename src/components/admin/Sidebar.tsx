@@ -12,6 +12,7 @@ import {
   Crown,
   LayoutGrid,
   Scale, // Ícone para tamanhos
+  CircleDashed, // Ícone adicionado para as bordas
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -19,7 +20,8 @@ const NAV_ITEMS = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/produtos", label: "Cardápio", icon: UtensilsCrossed },
   { href: "/admin/categorias", label: "Categorias", icon: LayoutGrid },
-  { href: "/admin/tamanhos", label: "Tamanhos", icon: Scale }, // Nova rota adicionada
+  { href: "/admin/tamanhos", label: "Tamanhos", icon: Scale },
+  { href: "/admin/bordas", label: "Bordas", icon: CircleDashed }, // Nova rota das bordas adicionada aqui!
   { href: "/admin/pedidos", label: "Pedidos", icon: ClipboardList },
   { href: "/admin/cozinha", label: "Cozinha", icon: Printer },
 ];
