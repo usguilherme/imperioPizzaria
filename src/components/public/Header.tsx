@@ -19,6 +19,7 @@ export function Header() {
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur">
       <div className="mx-auto flex max-w-7xl items-center gap-6 px-4 py-3">
+        {/* Logo */}
         <Link href="/" className="flex items-center gap-2 shrink-0">
           <Crown className="text-accent" size={28} />
           <span className="font-display text-xl font-bold text-foreground">
@@ -26,6 +27,7 @@ export function Header() {
           </span>
         </Link>
 
+        {/* Busca */}
         <div className="relative hidden flex-1 max-w-md md:block">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-foreground-subtle" size={18} />
           <input
@@ -35,8 +37,8 @@ export function Header() {
           />
         </div>
 
-        {/* Categorias com design moderno e scroll suave */}
-        <nav className="hidden lg:flex items-center gap-6 overflow-x-auto max-w-[500px] scroll-smooth [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {/* Categorias com efeito de máscara nas bordas indicando rolagem */}
+        <nav className="hidden lg:flex items-center gap-6 overflow-x-auto max-w-[500px] scroll-smooth [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [mask-image:linear-gradient(to_right,transparent,black_15%,black_85%,transparent)]">
           {categories.map((cat) => (
             <Link
               key={cat.slug}
@@ -48,6 +50,7 @@ export function Header() {
           ))}
         </nav>
 
+        {/* Ações */}
         <div className="ml-auto flex items-center gap-3">
           <Link href="/admin/login" className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm text-foreground-muted transition-colors hover:text-foreground">
             <User size={18} />
