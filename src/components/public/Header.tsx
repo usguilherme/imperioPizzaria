@@ -37,13 +37,13 @@ export function Header() {
           />
         </div>
 
-        {/* Categorias com efeito de máscara nas bordas indicando rolagem */}
-        <nav className="hidden lg:flex items-center gap-6 overflow-x-auto max-w-[500px] scroll-smooth [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [mask-image:linear-gradient(to_right,transparent,black_15%,black_85%,transparent)]">
+        {/* Categorias compactas com scroll suave e efeito de máscara */}
+        <nav className="hidden lg:flex items-center gap-4 overflow-x-auto max-w-[500px] scroll-smooth [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [mask-image:linear-gradient(to_right,transparent,black_15%,black_85%,transparent)]">
           {categories.map((cat) => (
             <Link
               key={cat.slug}
               href={`/#${cat.slug}`}
-              className="text-sm font-medium text-foreground-muted transition-all duration-300 hover:text-primary whitespace-nowrap px-3 py-1.5 rounded-full hover:bg-primary/10"
+              className="text-[13px] font-medium text-foreground-muted transition-all duration-300 hover:text-primary whitespace-nowrap px-2.5 py-1 rounded-full hover:bg-primary/10"
             >
               {cat.name}
             </Link>
