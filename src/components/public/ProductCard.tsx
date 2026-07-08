@@ -4,6 +4,7 @@ import Image from "next/image";
 import { Flame, Users } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { useCartStore } from "@/store/cart.store";
+import { useRouter } from "next/navigation";
 
 export interface ProductCardProps {
   id: string;
@@ -15,6 +16,7 @@ export interface ProductCardProps {
   promoPrice?: number | null;
   isPromoActive: boolean;
   isPizza?: boolean;
+  addons?: { name: string; price: number }[];
   onConfigurePizza?: (productId: string) => void;
 }
 
@@ -28,9 +30,11 @@ export function ProductCard({
   promoPrice,
   isPromoActive,
   isPizza = false,
+  addons = [],
   onConfigurePizza,
 }: ProductCardProps) {
   const addItem = useCartStore((state) => state.addItem);
+  const router = useRouter();
 
   const hasDiscount = isPromoActive && promoPrice != null && promoPrice < originalPrice;
   const discountPercent = hasDiscount
@@ -38,11 +42,23 @@ export function ProductCard({
     : 0;
   const finalPrice = hasDiscount ? promoPrice! : originalPrice;
 
+  // Verifica se o lanche possui algum adicional cadastrado no banco
+  const hasAddons = addons && addons.length > 0;
+
   const handleAction = () => {
+    // 1. Se for pizza, aciona o modal de montar pizza
     if (isPizza) {
       if (onConfigurePizza) onConfigurePizza(id);
       return;
     }
+
+    // 2. Se for um lanche com adicionais, leva para a tela de detalhes (ProductDetails)
+    if (hasAddons) {
+      router.push(`/produto/${id}`);
+      return;
+    }
+
+    // 3. Se for lanche simples (sem adicionais), joga direto no carrinho
     addItem({
       id: crypto.randomUUID(),
       productId: id,
@@ -104,7 +120,7 @@ export function ProductCard({
             onClick={handleAction}
             className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary-hover active:scale-95"
           >
-            {isPizza ? "Montar" : "Adicionar"}
+            {isPizza ? "Montar" : hasAddons ? "Personalizar" : "Adicionar"}
           </button>
         </div>
       </div>
