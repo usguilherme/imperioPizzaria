@@ -10,7 +10,7 @@ const nextConfig = {
   },
   experimental: {
     serverActions: {
-      bodySizeLimit: "4mb", // upload de imagens de produto via Server Action
+      bodySizeLimit: "10mb", // upload de imagens de produto via Server Action
     },
   },
 };
