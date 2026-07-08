@@ -30,7 +30,7 @@ interface ProductFormProps {
   };
 }
 
-const MAX_IMAGE_SIZE_MB = 3;
+const MAX_IMAGE_SIZE_MB = 10;
 
 function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
