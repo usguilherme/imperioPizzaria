@@ -53,8 +53,6 @@ function mapCartItemsToOrderPayload(items: CartItem[]): CreateOrderItemInput[] {
 
 /**
  * Chamada pelo checkout público — não exige autenticação.
- * Assinatura: (dados do formulário, itens do carrinho) — dois argumentos
- * separados, exatamente como o checkout já está estruturado.
  */
 export async function createOrderAction(
   formData: CheckoutFormData,
@@ -91,4 +89,20 @@ export async function updateOrderStatusAction(orderId: string, newStatus: OrderS
   await orderRepository.updateStatus(orderId, newStatus);
   revalidatePath("/admin/pedidos");
   return { success: true };
+}
+
+/** Chamada pelo Kanban do admin para excluir um pedido — exige sessão. */
+export async function deleteOrderAction(orderId: string) {
+  const session = await getServerSession(authOptions);
+  if (!session) throw new Error("Não autorizado");
+
+  try {
+    await orderRepository.delete(orderId);
+    revalidatePath("/admin/pedidos");
+    return { success: true };
+  } catch (error) {
+    console.error("Erro ao deletar pedido:", error);
+    return { success: false, error: "Erro ao excluir o pedido." };
+  }
+
 }

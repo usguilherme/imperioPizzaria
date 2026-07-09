@@ -138,6 +138,23 @@ export class OrderRepository {
   async markAsPrinted(id: string) {
     return prisma.order.update({ where: { id }, data: { isPrinted: true } });
   }
+
+  // Método adicionado para resolver o erro de build
+  async delete(id: string) {
+    return prisma.$transaction(async (tx) => {
+      // 1. Encontra todos os itens para deletar sub-tabelas (addons e pizzas)
+      const items = await tx.orderItem.findMany({ where: { orderId: id } });
+      
+      for (const item of items) {
+        await tx.orderItemAddon.deleteMany({ where: { orderItemId: item.id } });
+        await tx.pizzaFlavorCombination.deleteMany({ where: { orderItemId: item.id } });
+      }
+
+      // 2. Deleta os itens e o pedido
+      await tx.orderItem.deleteMany({ where: { orderId: id } });
+      return await tx.order.delete({ where: { id } });
+    });
+  }
 }
 
 export const orderRepository = new OrderRepository();
