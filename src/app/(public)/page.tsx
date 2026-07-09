@@ -8,7 +8,7 @@ export default async function HomePage() {
   const categories = await productRepository.findAvailableByCategory();
   const flavorEligible = await productRepository.findFlavorEligible();
 
-  // Filtra todos os produtos que estão em promoção em qualquer categoria
+  // Filtra todos os produtos que estão em promoção em qualquer categoria, ok
   const promoProducts = categories.flatMap((category) =>
     category.products.filter((p) => p.isPromoActive && p.promoPrice != null)
   );
@@ -86,3 +86,4 @@ export default async function HomePage() {
     </div>
   );
 }
+//okkkkk
