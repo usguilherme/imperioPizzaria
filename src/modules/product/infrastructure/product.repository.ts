@@ -33,7 +33,6 @@ export class ProductRepository {
         isAvailable: data.isAvailable,
         isFlavorEligible: data.isFlavorEligible,
         categoryId: data.categoryId,
-        // Aqui conectamos os tamanhos selecionados ou deixamos vazio
         availableSizes: {
           connect: data.availableSizeIds?.map((id) => ({ id })) || [],
         },
@@ -56,7 +55,6 @@ export class ProductRepository {
         isAvailable: data.isAvailable,
         isFlavorEligible: data.isFlavorEligible,
         categoryId: data.categoryId,
-        // O método 'set' substitui a lista anterior pela nova, o que é ideal para updates
         availableSizes: data.availableSizeIds !== undefined ? {
           set: data.availableSizeIds.map((id) => ({ id })),
         } : undefined,

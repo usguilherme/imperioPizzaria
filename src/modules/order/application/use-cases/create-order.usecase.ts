@@ -1,7 +1,6 @@
-import { productRepository } from "@/modules/product/infrastructure/product.repository";
+import { prisma } from "@/lib/prisma";
 import { orderRepository } from "../../infrastructure/order.repository";
 import { CreateOrderDTO } from "../../domain/dtos/order.dto";
-import { calculatePizzaPriceUseCase } from "./calculate-pizza-price.usecase";
 import { generateOrderCode } from "@/lib/utils";
 
 interface UseCaseResult<T> {
@@ -21,32 +20,63 @@ export async function createOrderUseCase(
   let subtotal = 0;
 
   for (const item of input.items) {
-    let unitPrice: number;
+    const product = await prisma.product.findUnique({ where: { id: item.productId } });
+    if (!product || !product.isAvailable) {
+      return { success: false, error: `Produto indisponível: ${item.productId}` };
+    }
 
-    if (item.pizzaFlavors) {
-      // Agora enviamos o sizeId para validar as regras do banco
-      const pizzaPrice = await calculatePizzaPriceUseCase(
-        item.pizzaFlavors.sizeId,
-        item.pizzaFlavors.flavorOneId,
-        item.pizzaFlavors.flavorTwoId
-      );
-      
-      if (!pizzaPrice.success || pizzaPrice.unitPrice == null) {
-        return { success: false, error: pizzaPrice.error ?? "Erro ao calcular preço da pizza" };
+    let unitPrice: number;
+    let pizzaSelection: {
+      sizeId: string;
+      flavorOneId: string;
+      flavorTwoId?: string | null;
+      crustId?: string | null;
+    } | null = null;
+
+    if (item.pizza) {
+      const size = await prisma.pizzaSize.findUnique({ where: { id: item.pizza.sizeId } });
+      if (!size || !size.isActive) {
+        return { success: false, error: "Tamanho de pizza inválido ou indisponível" };
       }
-      unitPrice = pizzaPrice.unitPrice;
+
+      const flavorOne = await prisma.product.findUnique({ where: { id: item.pizza.flavorOneId } });
+      if (!flavorOne || !flavorOne.isFlavorEligible) {
+        return { success: false, error: "Sabor 1 inválido ou não elegível" };
+      }
+
+      if (item.pizza.flavorTwoId) {
+        const flavorTwo = await prisma.product.findUnique({ where: { id: item.pizza.flavorTwoId } });
+        if (!flavorTwo || !flavorTwo.isFlavorEligible) {
+          return { success: false, error: "Sabor 2 inválido ou não elegível" };
+        }
+      }
+
+      // Preço da pizza = preço do TAMANHO escolhido (fixo, compartilhado entre produtos)
+      unitPrice = Number(size.price);
+
+      if (item.pizza.crustId) {
+        const crust = await prisma.pizzaCrust.findUnique({ where: { id: item.pizza.crustId } });
+        if (!crust || !crust.isActive) {
+          return { success: false, error: "Borda inválida ou indisponível" };
+        }
+        unitPrice += Number(crust.price);
+      }
+
+      pizzaSelection = {
+        sizeId: item.pizza.sizeId,
+        flavorOneId: item.pizza.flavorOneId,
+        flavorTwoId: item.pizza.flavorTwoId ?? null,
+        crustId: item.pizza.crustId ?? null,
+      };
     } else {
-      const product = await productRepository.findById(item.productId);
-      if (!product || !product.isAvailable) {
-        return { success: false, error: `Produto indisponível: ${item.productId}` };
-      }
       unitPrice =
         product.isPromoActive && product.promoPrice
           ? Number(product.promoPrice)
           : Number(product.originalPrice);
     }
 
-    const totalPrice = unitPrice * item.quantity;
+    const addonsTotal = (item.selectedAddons ?? []).reduce((sum, a) => sum + a.price, 0);
+    const totalPrice = (unitPrice + addonsTotal) * item.quantity;
     subtotal += totalPrice;
 
     resolvedItems.push({
@@ -55,13 +85,8 @@ export async function createOrderUseCase(
       unitPrice,
       totalPrice,
       observation: item.observation ?? null,
-      pizzaFlavors: item.pizzaFlavors 
-        ? {
-            sizeId: item.pizzaFlavors.sizeId, 
-            flavorOneId: item.pizzaFlavors.flavorOneId,
-            flavorTwoId: item.pizzaFlavors.flavorTwoId ?? null,
-          }
-        : null,
+      addons: item.selectedAddons ?? [],
+      pizza: pizzaSelection,
     });
   }
 
@@ -73,6 +98,7 @@ export async function createOrderUseCase(
     customerPhone: input.customerPhone,
     deliveryAddress: input.deliveryAddress,
     addressComplement: input.addressComplement,
+    neighborhood: input.neighborhood,
     paymentMethod: input.paymentMethod,
     subtotal,
     deliveryFee: input.deliveryFee,

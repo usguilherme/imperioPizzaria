@@ -1,17 +1,26 @@
 import { prisma } from "@/lib/prisma";
 import { Prisma, OrderStatus } from "@prisma/client";
 
+interface ResolvedAddon {
+  name: string;
+  price: number;
+}
+
+interface ResolvedPizzaSelection {
+  sizeId: string;
+  flavorOneId: string;
+  flavorTwoId?: string | null;
+  crustId?: string | null;
+}
+
 interface OrderItemInput {
   productId: string;
   quantity: number;
-  unitPrice: number;
-  totalPrice: number;
+  unitPrice: number; // preço unitário base (tamanho OU preço fixo do produto)
+  totalPrice: number; // (unitPrice + adicionais + borda) * quantity
   observation?: string | null;
-  pizzaFlavors?: {
-    sizeId: string; // Adicionado aqui
-    flavorOneId: string;
-    flavorTwoId?: string | null;
-  } | null;
+  addons?: ResolvedAddon[];
+  pizza?: ResolvedPizzaSelection | null;
 }
 
 interface CreateOrderInput {
@@ -20,6 +29,7 @@ interface CreateOrderInput {
   customerPhone: string;
   deliveryAddress: string;
   addressComplement?: string | null;
+  neighborhood?: string | null;
   paymentMethod: Prisma.OrderCreateInput["paymentMethod"];
   subtotal: number;
   deliveryFee: number;
@@ -39,6 +49,7 @@ export class OrderRepository {
           customerPhone: input.customerPhone,
           deliveryAddress: input.deliveryAddress,
           addressComplement: input.addressComplement,
+          neighborhood: input.neighborhood,
           paymentMethod: input.paymentMethod,
           subtotal: new Prisma.Decimal(input.subtotal),
           deliveryFee: new Prisma.Decimal(input.deliveryFee),
@@ -60,13 +71,24 @@ export class OrderRepository {
           },
         });
 
-        if (item.pizzaFlavors) {
+        if (item.addons && item.addons.length > 0) {
+          await tx.orderItemAddon.createMany({
+            data: item.addons.map((addon) => ({
+              orderItemId: orderItem.id,
+              name: addon.name,
+              price: new Prisma.Decimal(addon.price),
+            })),
+          });
+        }
+
+        if (item.pizza) {
           await tx.pizzaFlavorCombination.create({
             data: {
               orderItemId: orderItem.id,
-              sizeId: item.pizzaFlavors.sizeId, // Agora o TypeScript reconhece este campo
-              flavorOneId: item.pizzaFlavors.flavorOneId,
-              flavorTwoId: item.pizzaFlavors.flavorTwoId ?? null,
+              sizeId: item.pizza.sizeId,
+              flavorOneId: item.pizza.flavorOneId,
+              flavorTwoId: item.pizza.flavorTwoId ?? null,
+              crustId: item.pizza.crustId ?? null,
             },
           });
         }
@@ -98,8 +120,9 @@ export class OrderRepository {
         items: {
           include: {
             product: true,
+            addons: true,
             pizzaCombination: {
-              include: { flavorOne: true, flavorTwo: true },
+              include: { size: true, crust: true, flavorOne: true, flavorTwo: true },
             },
           },
         },
@@ -110,6 +133,10 @@ export class OrderRepository {
 
   async updateStatus(id: string, status: OrderStatus) {
     return prisma.order.update({ where: { id }, data: { status } });
+  }
+
+  async markAsPrinted(id: string) {
+    return prisma.order.update({ where: { id }, data: { isPrinted: true } });
   }
 }
 

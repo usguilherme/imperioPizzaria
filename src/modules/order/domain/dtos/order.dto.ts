@@ -1,13 +1,22 @@
+export interface SelectedAddonInput {
+  name: string;
+  price: number;
+}
+
+export interface PizzaSelectionInput {
+  sizeId: string;
+  flavorOneId: string;
+  flavorTwoId?: string | null;
+  crustId?: string | null;
+}
+
 export interface CreateOrderItemInput {
   productId: string;
   quantity: number;
   observation?: string | null;
-  // Preenchido apenas quando o item é uma pizza
-  pizzaFlavors?: {
-    sizeId: string; // Adicionado aqui para permitir o fluxo de dados no UseCase e Repositório
-    flavorOneId: string;
-    flavorTwoId?: string | null;
-  } | null;
+  selectedAddons?: SelectedAddonInput[];
+  // Presente somente quando o item é uma pizza (tamanho + sabor(es) + borda opcional)
+  pizza?: PizzaSelectionInput | null;
 }
 
 export interface CreateOrderDTO {
@@ -15,6 +24,7 @@ export interface CreateOrderDTO {
   customerPhone: string;
   deliveryAddress: string;
   addressComplement?: string | null;
+  neighborhood?: string | null;
   paymentMethod: "PIX" | "CREDIT_CARD" | "DEBIT_CARD" | "CASH";
   deliveryFee: number;
   notes?: string | null;

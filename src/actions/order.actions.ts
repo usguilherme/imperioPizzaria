@@ -1,135 +1,94 @@
 "use server";
 
-import { PrismaClient, PaymentMethod, OrderStatus } from "@prisma/client";
-import { CartItem } from "@/store/cart.store";
 import { revalidatePath } from "next/cache";
+import { OrderStatus } from "@prisma/client";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/modules/auth/infrastructure/auth.config";
+import { createOrderUseCase } from "@/modules/order/application/use-cases/create-order.usecase";
+import { orderRepository } from "@/modules/order/infrastructure/order.repository";
+import { CreateOrderItemInput } from "@/modules/order/domain/dtos/order.dto";
+import { CartItem } from "@/store/cart.store";
 
-const prisma = new PrismaClient();
-
-interface CheckoutData {
+interface CheckoutFormData {
   customerName: string;
   customerPhone: string;
   deliveryAddress: string;
-  addressComplement?: string;
-  paymentMethod: PaymentMethod;
-  notes?: string;
+  addressComplement?: string | null;
+  neighborhood?: string | null;
+  paymentMethod: "PIX" | "CREDIT_CARD" | "DEBIT_CARD" | "CASH";
   deliveryFee: number;
-  neighborhood: string; 
+  notes?: string | null;
 }
 
-export async function createOrderAction(checkoutData: CheckoutData, cartItems: CartItem[]) {
-  try {
-    let subtotal = 0;
-    const deliveryFee = checkoutData.deliveryFee; 
+interface CreateOrderActionResult {
+  success: boolean;
+  code?: string;
+  error?: string;
+}
 
-    const processedItems = await Promise.all(
-      cartItems.map(async (item) => {
-        let basePrice = 0;
+/**
+ * Converte os itens do carrinho (Zustand) para o formato que o use-case espera.
+ * Pizza é identificada pela presença de sizeId + flavors; o resto é produto simples.
+ */
+function mapCartItemsToOrderPayload(items: CartItem[]): CreateOrderItemInput[] {
+  return items.map((item) => {
+    const isPizza = !!item.sizeId && !!item.flavors && item.flavors.length > 0;
 
-        if (item.sizeId) {
-          const size = await prisma.pizzaSize.findUnique({ where: { id: item.sizeId } });
-          if (!size) throw new Error("Tamanho de pizza inválido");
-          basePrice = Number(size.price);
-        } else {
-          const product = await prisma.product.findUnique({ where: { id: item.productId } });
-          if (!product) throw new Error("Produto inválido");
-          basePrice = Number(product.promoPrice || product.originalPrice);
-        }
-
-        // Garante que o valor dos adicionais seja somado corretamente
-        const addonsPrice = item.selectedAddons?.reduce((acc, a) => acc + Number(a.price), 0) || 0;
-        const finalUnitPrice = basePrice + addonsPrice;
-        const itemTotal = finalUnitPrice * item.quantity;
-        
-        subtotal += itemTotal;
-
-        return {
-          ...item,
-          unitPrice: finalUnitPrice,
-          totalPrice: itemTotal,
-          addonsPrice,
-        };
-      })
-    );
-
-    const total = subtotal + deliveryFee;
-    const orderCode = `PED-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
-
-    const order = await prisma.$transaction(async (tx) => {
-      const newOrder = await tx.order.create({
-        data: {
-          code: orderCode,
-          customerName: checkoutData.customerName,
-          customerPhone: checkoutData.customerPhone,
-          deliveryAddress: checkoutData.deliveryAddress,
-          addressComplement: checkoutData.addressComplement,
-          paymentMethod: checkoutData.paymentMethod,
-          notes: checkoutData.notes,
-          subtotal,
-          deliveryFee,
-          total,
-          neighborhood: checkoutData.neighborhood,
-        },
-      });
-
-      for (const item of processedItems) {
-        const orderItem = await tx.orderItem.create({
-          data: {
-            orderId: newOrder.id,
-            productId: item.productId,
-            quantity: item.quantity,
-            unitPrice: item.unitPrice,
-            totalPrice: item.totalPrice,
-          },
-        });
-
-        // SALVA OS ADICIONAIS NO BANCO DE DADOS
-        if (item.selectedAddons && item.selectedAddons.length > 0) {
-          for (const addon of item.selectedAddons) {
-            await tx.orderItemAddon.create({
-              data: {
-                orderItemId: orderItem.id,
-                name: addon.name,
-                price: Number(addon.price)
-              }
-            });
+    return {
+      productId: isPizza ? item.flavors![0]!.id : item.productId,
+      quantity: item.quantity,
+      observation: undefined,
+      selectedAddons: item.selectedAddons?.map((a) => ({ name: a.name, price: a.price })) ?? [],
+      pizza: isPizza
+        ? {
+            sizeId: item.sizeId!,
+            flavorOneId: item.flavors![0]!.id,
+            flavorTwoId: item.flavors![1]?.id ?? null,
+            crustId: null, // seleção de borda ainda não existe na UI do PizzaBuilderModal
           }
-        }
+        : null,
+    };
+  });
+}
 
-        if (item.sizeId && item.flavors && item.flavors.length > 0) {
-          const flavorOne = item.flavors[0];
-          const flavorTwo = item.flavors[1];
-          
-          if (flavorOne && flavorOne.id) {
-            await tx.pizzaFlavorCombination.create({
-              data: {
-                orderItemId: orderItem.id,
-                sizeId: item.sizeId,
-                flavorOneId: flavorOne.id,
-                flavorTwoId: (flavorTwo && flavorTwo.id) ? flavorTwo.id : null,
-              },
-            });
-          }
-        }
-      }
-      return newOrder;
-    });
+/**
+ * Chamada pelo checkout público — não exige autenticação.
+ * Assinatura: (dados do formulário, itens do carrinho) — dois argumentos
+ * separados, exatamente como o checkout já está estruturado.
+ */
+export async function createOrderAction(
+  formData: CheckoutFormData,
+  cartItems: CartItem[]
+): Promise<CreateOrderActionResult> {
+  const result = await createOrderUseCase({
+    customerName: formData.customerName,
+    customerPhone: formData.customerPhone,
+    deliveryAddress: formData.deliveryAddress,
+    addressComplement: formData.addressComplement ?? null,
+    neighborhood: formData.neighborhood ?? null,
+    paymentMethod: formData.paymentMethod,
+    deliveryFee: formData.deliveryFee,
+    notes: formData.notes ?? null,
+    items: mapCartItemsToOrderPayload(cartItems),
+  });
 
-    return { success: true, orderId: order.id, code: order.code };
-  } catch (error) {
-    console.error("Erro ao processar pedido:", error);
-    return { success: false, error: "Falha ao finalizar pedido." };
+  if (!result.success || !result.data) {
+    return { success: false, error: result.error ?? "Erro ao finalizar pedido" };
   }
-}
 
-export async function updateOrderStatusAction(orderId: string, status: OrderStatus) {
-  await prisma.order.update({ where: { id: orderId }, data: { status } });
   revalidatePath("/admin/pedidos");
-  return { success: true };
+  return { success: true, code: result.data.code };
 }
 
-export async function deleteOrderAction(orderId: string) {
-  await prisma.order.delete({ where: { id: orderId } });
+/** Chamada pelo Kanban do admin — exige sessão. */
+export async function updateOrderStatusAction(orderId: string, newStatus: OrderStatus) {
+  const session = await getServerSession(authOptions);
+  if (!session) throw new Error("Não autorizado");
+
+  const order = await orderRepository.findById(orderId);
+  if (!order) return { success: false, error: "Pedido não encontrado" };
+
+  await orderRepository.updateStatus(orderId, newStatus);
   revalidatePath("/admin/pedidos");
   return { success: true };
 }

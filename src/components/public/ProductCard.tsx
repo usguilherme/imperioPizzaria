@@ -5,6 +5,7 @@ import { Flame, Users } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { useCartStore } from "@/store/cart.store";
 import { useRouter } from "next/navigation";
+import { SizeOption } from "./PizzaBuilderModal";
 
 export interface ProductCardProps {
   id: string;
@@ -12,11 +13,12 @@ export interface ProductCardProps {
   description: string;
   imageUrl: string;
   servesInfo?: string | null;
-  originalPrice: number;
+  originalPrice: number | null;
   promoPrice?: number | null;
   isPromoActive: boolean;
   isPizza?: boolean;
   addons?: { name: string; price: number }[];
+  sizeOptions?: SizeOption[];
   onConfigurePizza?: (productId: string) => void;
 }
 
@@ -31,34 +33,34 @@ export function ProductCard({
   isPromoActive,
   isPizza = false,
   addons = [],
+  sizeOptions = [],
   onConfigurePizza,
 }: ProductCardProps) {
   const addItem = useCartStore((state) => state.addItem);
   const router = useRouter();
 
-  const hasDiscount = isPromoActive && promoPrice != null && promoPrice < originalPrice;
-  const discountPercent = hasDiscount
-    ? Math.round(((originalPrice - promoPrice!) / originalPrice) * 100)
-    : 0;
-  const finalPrice = hasDiscount ? promoPrice! : originalPrice;
+  const hasDiscount = isPromoActive && promoPrice != null && originalPrice != null && promoPrice < originalPrice;
+  const discountPercent =
+    hasDiscount && originalPrice ? Math.round(((originalPrice - promoPrice!) / originalPrice) * 100) : 0;
+  const finalPrice = hasDiscount ? promoPrice! : originalPrice ?? 0;
 
-  // Verifica se o lanche possui algum adicional cadastrado no banco
   const hasAddons = addons && addons.length > 0;
+  const hasSizes = sizeOptions && sizeOptions.length > 0;
 
   const handleAction = () => {
-    // 1. Se for pizza, aciona o modal de montar pizza
-    if (isPizza) {
+    // Se for pizza OU se o produto tiver tamanhos cadastrados, abre o modal de configuração
+    if (isPizza || hasSizes) {
       if (onConfigurePizza) onConfigurePizza(id);
       return;
     }
 
-    // 2. Se for um lanche com adicionais, leva para a tela de detalhes (ProductDetails)
+    // Lanche com adicionais -> tela de detalhes
     if (hasAddons) {
       router.push(`/produto/${id}`);
       return;
     }
 
-    // 3. Se for lanche simples (sem adicionais), joga direto no carrinho
+    // Lanche simples -> direto no carrinho
     addItem({
       id: crypto.randomUUID(),
       productId: id,
@@ -85,6 +87,7 @@ export function ProductCard({
           fill
           className="object-cover transition-transform duration-500 group-hover:scale-105"
           sizes="(max-width: 768px) 100vw, 33vw"
+          unoptimized={imageUrl.startsWith("data:")}
         />
       </div>
 
@@ -100,27 +103,27 @@ export function ProductCard({
         {servesInfo && (
           <div className="flex items-center gap-1.5 text-xs text-accent">
             <Users size={14} />
-            <span>{servesInfo}</span>
+            <div className="inline-block">{servesInfo}</div>
           </div>
         )}
 
         <div className="mt-auto flex items-end justify-between pt-3">
           <div className="flex flex-col">
             {hasDiscount && (
-              <span className="text-xs text-foreground-subtle line-through">
-                {formatCurrency(originalPrice)}
-              </span>
+              <div className="text-xs text-foreground-subtle line-through">
+                {formatCurrency(originalPrice!)}
+              </div>
             )}
-            <span className="font-display text-xl font-bold text-primary">
+            <div className="font-display text-xl font-bold text-primary">
               {formatCurrency(finalPrice)}
-            </span>
+            </div>
           </div>
 
           <button
             onClick={handleAction}
             className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary-hover active:scale-95"
           >
-            {isPizza ? "Montar" : hasAddons ? "Personalizar" : "Adicionar"}
+            {isPizza || hasSizes ? "Montar" : hasAddons ? "Personalizar" : "Adicionar"}
           </button>
         </div>
       </div>

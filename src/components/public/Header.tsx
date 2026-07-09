@@ -8,8 +8,10 @@ import { useEffect, useState } from "react";
 export function Header() {
   const itemsCount = useCartStore((state) => state.getTotalItems());
   const [categories, setCategories] = useState<{ name: string; slug: string }[]>([]);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     fetch("/api/categories")
       .then((res) => res.json())
       .then((data) => setCategories(data))
@@ -22,9 +24,9 @@ export function Header() {
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2 shrink-0">
           <Crown className="text-accent" size={28} />
-          <span className="font-display text-xl font-bold text-foreground">
+          <div className="font-display text-xl font-bold text-foreground">
             Império
-          </span>
+          </div>
         </Link>
 
         {/* Busca */}
@@ -37,7 +39,7 @@ export function Header() {
           />
         </div>
 
-        {/* Categorias compactas com scroll suave e efeito de máscara */}
+        {/* Categorias */}
         <nav className="hidden lg:flex items-center gap-4 overflow-x-auto max-w-[500px] scroll-smooth [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [mask-image:linear-gradient(to_right,transparent,black_15%,black_85%,transparent)]">
           {categories.map((cat) => (
             <Link
@@ -54,16 +56,16 @@ export function Header() {
         <div className="ml-auto flex items-center gap-3">
           <Link href="/admin/login" className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm text-foreground-muted transition-colors hover:text-foreground">
             <User size={18} />
-            <span className="hidden sm:inline">Entrar</span>
+            <div className="hidden sm:inline">Entrar</div>
           </Link>
 
           <Link href="/carrinho" className="relative flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary-hover">
             <ShoppingCart size={18} />
-            <span className="hidden sm:inline">Carrinho</span>
-            {itemsCount > 0 && (
-              <span className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-accent text-[11px] font-bold text-white">
+            <div className="hidden sm:inline">Carrinho</div>
+            {mounted && itemsCount > 0 && (
+              <div className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-accent text-[11px] font-bold text-white">
                 {itemsCount}
-              </span>
+              </div>
             )}
           </Link>
         </div>

@@ -6,7 +6,6 @@ import { PizzaBuilderModal } from "./PizzaBuilderModal";
 
 interface ProductGridProps {
   products: Omit<ProductCardProps, "onConfigurePizza">[];
-  // Tipagem atualizada para receber os dados completos que vêm do page.tsx
   flavorOptions: { id: string; title: string; imageUrl: string; price: number }[];
 }
 
@@ -31,8 +30,10 @@ export function ProductGrid({ products, flavorOptions }: ProductGridProps) {
             id: selectedPizza.id,
             title: selectedPizza.title,
             imageUrl: selectedPizza.imageUrl,
+            isPizza: selectedPizza.isPizza, // Prop enviada para o modal saber se mostra sabores
           }}
           availableFlavors={flavorOptions}
+          sizeOptions={selectedPizza.sizeOptions ?? []}
           onClose={() => setSelectedPizza(null)}
         />
       )}
