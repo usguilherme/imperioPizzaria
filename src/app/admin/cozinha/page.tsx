@@ -67,11 +67,53 @@ export default function KitchenPage() {
               
               <div className="ticket-divider border-t border-dashed border-black my-2" />
               
+              {/* LÓGICA DE ITENS ATUALIZADA AQUI */}
               {order.items.map((item: any) => (
-                <div key={item.id} className="ticket-item mb-2">
-                  <p className="ticket-item-qty font-bold">{item.quantity}x {item.product?.title || item.name}</p>
+                <div key={item.id} className="ticket-item mb-3">
+                  <p className="ticket-item-qty font-bold text-base">
+                    {item.quantity}x {item.product?.title || item.name}
+                  </p>
+                  
+                  {/* Detalhes do produto - Fonte um pouco menor e com recuo */}
+                  <div className="pl-3 text-sm">
+                    
+                    {/* Exibe o Tamanho, se tiver */}
+                    {(item.sizeName || item.size?.name) && (
+                      <p>- Tamanho: {item.sizeName || item.size?.name}</p>
+                    )}
+
+                    {/* Exibe a Borda, se tiver */}
+                    {(item.crustName || item.crust?.name) && (
+                      <p>- Borda: {item.crustName || item.crust?.name}</p>
+                    )}
+
+                    {/* Exibe múltiplos Sabores (AQUI ESTÁ A CORREÇÃO DO OBJECT) */}
+                    {item.flavors && item.flavors.length > 0 && (
+                      <p>- Sabores: {item.flavors.map((f: any) => f.name || f.title || f.product?.title || "Sabor não informado").join(", ")}</p>
+                    )}
+
+                    {/* Exibe Adicionais (como bacon extra, mais queijo) */}
+                    {item.addons && item.addons.length > 0 && (
+                      <div className="mt-1">
+                        <p className="font-semibold">Adicionais:</p>
+                        {item.addons.map((addon: any, idx: number) => (
+                          <p key={idx} className="pl-2">
+                            + {addon.quantity || 1}x {addon.name || addon.addon?.name}
+                          </p>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Exibe Observações daquele item específico */}
+                    {(item.observations || item.observation) && (
+                      <p className="mt-1 font-semibold uppercase">
+                        Obs: {item.observations || item.observation}
+                      </p>
+                    )}
+                  </div>
                 </div>
               ))}
+              {/* FIM DA LÓGICA DE ITENS */}
               
               <div className="ticket-divider border-t border-dashed border-black my-2" />
               <p className="ticket-total text-right font-bold text-lg">TOTAL: {formatCurrency(order.total)}</p>

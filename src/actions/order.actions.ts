@@ -28,23 +28,27 @@ interface CreateOrderActionResult {
 
 /**
  * Converte os itens do carrinho (Zustand) para o formato que o use-case espera.
- * Pizza é identificada pela presença de sizeId + flavors; o resto é produto simples.
+ * Pizza é identificada pela presença de sizeId; o resto é produto simples.
  */
 function mapCartItemsToOrderPayload(items: CartItem[]): CreateOrderItemInput[] {
   return items.map((item) => {
-    const isPizza = !!item.sizeId && !!item.flavors && item.flavors.length > 0;
+    // Apenas verificamos se tem tamanho. Se tem, é pizza!
+    const isPizza = !!(item as any).sizeId;
+    const flavorsArr = (item as any).flavors || [];
 
     return {
-      productId: isPizza ? item.flavors![0]!.id : item.productId,
+      // Se for pizza de 1 sabor, o sabor principal é o próprio productId
+      productId: isPizza && flavorsArr.length > 0 ? flavorsArr[0].id : item.productId,
       quantity: item.quantity,
       observation: undefined,
       selectedAddons: item.selectedAddons?.map((a) => ({ name: a.name, price: a.price })) ?? [],
       pizza: isPizza
         ? {
-            sizeId: item.sizeId!,
-            flavorOneId: item.flavors![0]!.id,
-            flavorTwoId: item.flavors![1]?.id ?? null,
-            crustId: null, // seleção de borda ainda não existe na UI do PizzaBuilderModal
+            sizeId: (item as any).sizeId,
+            // Puxa o sabor 1 do array, ou do productId se for sabor único
+            flavorOneId: flavorsArr.length > 0 ? flavorsArr[0].id : item.productId,
+            flavorTwoId: flavorsArr.length > 1 ? flavorsArr[1].id : null,
+            crustId: (item as any).crustId || null, 
           }
         : null,
     };
@@ -104,5 +108,4 @@ export async function deleteOrderAction(orderId: string) {
     console.error("Erro ao deletar pedido:", error);
     return { success: false, error: "Erro ao excluir o pedido." };
   }
-
 }

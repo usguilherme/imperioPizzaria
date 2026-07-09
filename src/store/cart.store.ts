@@ -23,6 +23,10 @@ export interface CartItem {
   sizeId?: string;
   sizeName?: string;
   flavors?: CartFlavor[];
+
+  // A CORREÇÃO FOI AQUI: Adicionando as bordas para não se perderem mais!
+  crustId?: string | null;
+  crustName?: string | null;
   
   // Adicionais
   selectedAddons?: CartAddon[];

@@ -40,14 +40,18 @@ export async function createOrderUseCase(
       }
 
       const flavorOne = await prisma.product.findUnique({ where: { id: item.pizza.flavorOneId } });
-      if (!flavorOne || !flavorOne.isFlavorEligible) {
-        return { success: false, error: "Sabor 1 inválido ou não elegível" };
+      
+      // A MÁGICA FOI AQUI: Removemos a obrigatoriedade do isFlavorEligible para o sabor principal.
+      // Se a pessoa pediu a pizza inteira de um sabor só, ele não precisa dessa restrição!
+      if (!flavorOne) {
+        return { success: false, error: "Sabor principal inválido" };
       }
 
       if (item.pizza.flavorTwoId) {
         const flavorTwo = await prisma.product.findUnique({ where: { id: item.pizza.flavorTwoId } });
+        // O sabor 2 (para pizza meio a meio) continua com a regra rigorosa
         if (!flavorTwo || !flavorTwo.isFlavorEligible) {
-          return { success: false, error: "Sabor 2 inválido ou não elegível" };
+          return { success: false, error: "Sabor 2 inválido ou não elegível para meio a meio" };
         }
       }
 
