@@ -28,8 +28,8 @@ export async function toggleProductAvailabilityAction(id: string, isAvailable: b
 
 export async function createProductAction(data: any) {
   try {
-    // Extraímos os IDs das bordas também
-    const { addons, availableSizeIds, availableCrustIds, ...productData } = data;
+    // 🆕 Extraímos também sizePromos
+    const { addons, availableSizeIds, availableCrustIds, sizePromos, ...productData } = data;
 
     const product = await db.product.create({
       data: {
@@ -39,9 +39,18 @@ export async function createProductAction(data: any) {
           : undefined,
         availableCrusts: availableCrustIds?.length > 0 
           ? { connect: availableCrustIds.map((id: string) => ({ id })) } 
-          : undefined, // LÓGICA DE BORDAS ADICIONADA AQUI
+          : undefined,
         addons: addons?.length > 0 
           ? { create: addons } 
+          : undefined,
+        // 🆕 cria as promoções por tamanho junto com o produto
+        sizePromos: sizePromos?.length > 0
+          ? {
+              create: sizePromos.map((p: { sizeId: string; promoPrice: number }) => ({
+                sizeId: p.sizeId,
+                promoPrice: p.promoPrice,
+              })),
+            }
           : undefined,
       },
     });
@@ -56,26 +65,45 @@ export async function createProductAction(data: any) {
 
 export async function updateProductAction(id: string, data: any) {
   try {
-    // Extraímos os IDs das bordas também
-    const { addons, availableSizeIds, availableCrustIds, ...productData } = data;
+    // 🆕 Extraímos também sizePromos
+    const { addons, availableSizeIds, availableCrustIds, sizePromos, ...productData } = data;
 
-    // Limpa os adicionais antigos deste produto antes de salvar os novos editados
-    await db.addon.deleteMany({ where: { productId: id } });
+    // 🆕 Usamos transaction para garantir que addons + sizePromos + o
+    // update do produto acontecem juntos, ou nada acontece (evita ficar
+    // com addons apagados mas sizePromos antigos, por exemplo).
+    const product = await db.$transaction(async (tx) => {
+      // Limpa os adicionais antigos deste produto antes de salvar os novos editados
+      await tx.addon.deleteMany({ where: { productId: id } });
 
-    const product = await db.product.update({
-      where: { id },
-      data: {
-        ...productData,
-        availableSizes: {
-          set: availableSizeIds?.map((sizeId: string) => ({ id: sizeId })) || [],
+      // 🆕 Limpa as promoções por tamanho antigas deste produto
+      // (padrão delete-and-recreate: mais simples que fazer diff
+      // linha a linha entre o estado antigo e o novo do formulário)
+      await tx.pizzaFlavorSizePromo.deleteMany({ where: { productId: id } });
+
+      return tx.product.update({
+        where: { id },
+        data: {
+          ...productData,
+          availableSizes: {
+            set: availableSizeIds?.map((sizeId: string) => ({ id: sizeId })) || [],
+          },
+          availableCrusts: {
+            set: availableCrustIds?.map((crustId: string) => ({ id: crustId })) || [],
+          },
+          addons: addons?.length > 0 
+            ? { create: addons } 
+            : undefined,
+          // 🆕 recria as promoções por tamanho com os dados atuais do form
+          sizePromos: sizePromos?.length > 0
+            ? {
+                create: sizePromos.map((p: { sizeId: string; promoPrice: number }) => ({
+                  sizeId: p.sizeId,
+                  promoPrice: p.promoPrice,
+                })),
+              }
+            : undefined,
         },
-        availableCrusts: {
-          set: availableCrustIds?.map((crustId: string) => ({ id: crustId })) || [],
-        }, // LÓGICA DE BORDAS ADICIONADA AQUI
-        addons: addons?.length > 0 
-          ? { create: addons } 
-          : undefined,
-      },
+      });
     });
 
     revalidatePath("/admin/produtos");

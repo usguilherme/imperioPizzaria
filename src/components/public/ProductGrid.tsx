@@ -4,9 +4,21 @@ import { useState } from "react";
 import { ProductCard, ProductCardProps } from "./ProductCard";
 import { PizzaBuilderModal } from "./PizzaBuilderModal";
 
+// 🆕 Tipo da promoção de sabor por tamanho, igual ao que o modal espera
+interface FlavorSizePromo {
+  sizeId: string;
+  promoPrice: number;
+}
+
 interface ProductGridProps {
   products: Omit<ProductCardProps, "onConfigurePizza">[];
-  flavorOptions: { id: string; title: string; imageUrl: string; price: number }[];
+  flavorOptions: {
+    id: string;
+    title: string;
+    imageUrl: string;
+    price: number;
+    sizePromos?: FlavorSizePromo[]; // 🆕
+  }[];
 }
 
 export function ProductGrid({ products, flavorOptions }: ProductGridProps) {
@@ -31,7 +43,6 @@ export function ProductGrid({ products, flavorOptions }: ProductGridProps) {
             title: selectedPizza.title,
             imageUrl: selectedPizza.imageUrl,
             isPizza: selectedPizza.isPizza,
-            // A CORREÇÃO ESTÁ AQUI: Lemos do lugar certo, independente de como o TS interpretar
             availableCrusts: (selectedPizza as any).availableCrusts || (selectedPizza as any).crusts || [], 
             availableAddons: selectedPizza.addons,
           }}

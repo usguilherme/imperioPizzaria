@@ -104,6 +104,9 @@ model Product {
   availableSizes   PizzaSize[] @relation("ProductSizes")
   availableCrusts  PizzaCrust[] @relation("ProductCrusts")
 
+  // NOVO: promoções deste sabor por tamanho específico
+  sizePromos       PizzaFlavorSizePromo[]
+
   createdAt        DateTime    @default(now())
   updatedAt        DateTime    @updatedAt
 
@@ -134,8 +137,10 @@ model PizzaSize {
 
   pizzaCombinations PizzaFlavorCombination[]
   products          Product[] @relation("ProductSizes")
-  // Relação inversa para as bordas deste tamanho
-  crusts            PizzaCrust[] 
+  crusts            PizzaCrust[]
+
+  // NOVO: promoções de sabores atreladas a este tamanho
+  flavorSizePromos  PizzaFlavorSizePromo[]
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -153,7 +158,6 @@ model PizzaCrust {
   price       Decimal  @db.Decimal(10, 2)
   isActive    Boolean  @default(true)
 
-  // RELAÇÃO ADICIONADA: Agora a borda pertence a um tamanho específico 
   sizeId      String?
   size        PizzaSize? @relation(fields: [sizeId], references: [id])
 
@@ -164,6 +168,34 @@ model PizzaCrust {
   updatedAt   DateTime @updatedAt
 
   @@map("pizza_crusts")
+}
+
+// ==========================================
+// PROMOÇÃO DE SABOR POR TAMANHO (NOVO)
+// ==========================================
+
+// Liga um Product (sabor) a um PizzaSize específico com um preço
+// promocional. A existência de uma linha aqui só é aplicada se o
+// Product também tiver isPromoActive = true (reaproveita o campo
+// que já existe, evitando duplicar o estado "promoção ligada/desligada").
+model PizzaFlavorSizePromo {
+  id          String    @id @default(cuid())
+
+  productId   String
+  product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  sizeId      String
+  size        PizzaSize @relation(fields: [sizeId], references: [id], onDelete: Cascade)
+
+  promoPrice  Decimal   @db.Decimal(10, 2)
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Um sabor só pode ter UMA promoção por tamanho
+  @@unique([productId, sizeId])
+  @@index([sizeId])
+  @@map("pizza_flavor_size_promos")
 }
 
 // ==========================================

@@ -81,7 +81,13 @@ export class ProductRepository {
   async findById(id: string) {
     return prisma.product.findUnique({
       where: { id },
-      include: { category: true, availableSizes: true, addons: true, availableCrusts: true },
+      include: {
+        category: true,
+        availableSizes: true,
+        addons: true,
+        availableCrusts: true,
+        sizePromos: true, // 🆕 necessário para o admin pré-carregar promoções ao editar
+      },
     });
   }
 
@@ -124,7 +130,10 @@ export class ProductRepository {
   async findFlavorEligible() {
     return prisma.product.findMany({
       where: { isFlavorEligible: true, isAvailable: true },
-      include: { availableSizes: true },
+      include: {
+        availableSizes: true,
+        sizePromos: true, // 🆕 necessário para o cardápio calcular/exibir a promoção por tamanho
+      },
     });
   }
 }

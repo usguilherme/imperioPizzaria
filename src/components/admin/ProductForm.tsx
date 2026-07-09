@@ -18,7 +18,6 @@ interface SizeOption {
   name: string;
 }
 
-// NOVA INTERFACE PARA BORDAS
 interface CrustOption {
   id: string;
   name: string;
@@ -26,15 +25,19 @@ interface CrustOption {
 
 type Addon = { name: string; price: number };
 
+// Promoção de sabor específica por tamanho
+type SizePromo = { sizeId: string; promoPrice: number };
+
 interface ProductFormProps {
   categories: CategoryOption[];
   availableSizes: SizeOption[];
-  availableCrusts: CrustOption[]; // ADICIONADO AQUI
+  availableCrusts: CrustOption[];
   initialData?: ProductSchemaInput & { 
     id: string; 
     availableSizes?: { id: string }[];
-    availableCrusts?: { id: string }[]; // ADICIONADO AQUI
+    availableCrusts?: { id: string }[];
     addons?: Addon[];
+    sizePromos?: SizePromo[]; 
   };
 }
 
@@ -67,8 +70,13 @@ export function ProductForm({ categories, availableSizes, availableCrusts, initi
     isFlavorEligible: initialData?.isFlavorEligible ?? false,
     categoryId: initialData?.categoryId ?? categories[0]?.id ?? "",
     availableSizeIds: initialData?.availableSizes?.map(s => s.id) ?? [],
-    availableCrustIds: initialData?.availableCrusts?.map(c => c.id) ?? [], // ADICIONADO AQUI
-    addons: (initialData?.addons ?? []) as Addon[]
+    availableCrustIds: initialData?.availableCrusts?.map(c => c.id) ?? [],
+    addons: (initialData?.addons ?? []) as Addon[],
+    // 🆕 Correção: Força a conversão do Decimal do Prisma para Number nativo no carregamento
+    sizePromos: initialData?.sizePromos?.map((p: any) => ({
+      sizeId: p.sizeId,
+      promoPrice: Number(p.promoPrice) || 0
+    })) ?? [],
   });
 
   const addAddon = () => {
@@ -93,6 +101,35 @@ export function ProductForm({ categories, availableSizes, availableCrusts, initi
         [field]: value 
       } as Addon;
       return { ...prev, addons: newAddons };
+    });
+  };
+
+  // CRUD do array de promoções por tamanho
+  const addSizePromo = () => {
+    setForm((prev) => ({
+      ...prev,
+      sizePromos: [
+        ...prev.sizePromos,
+        { sizeId: availableSizes[0]?.id ?? "", promoPrice: 0 },
+      ],
+    }));
+  };
+
+  const removeSizePromo = (index: number) => {
+    setForm((prev) => ({
+      ...prev,
+      sizePromos: prev.sizePromos.filter((_, i) => i !== index),
+    }));
+  };
+
+  const updateSizePromo = (index: number, field: "sizeId" | "promoPrice", value: string | number) => {
+    setForm((prev) => {
+      const newPromos = [...prev.sizePromos];
+      newPromos[index] = {
+        ...newPromos[index],
+        [field]: value,
+      } as SizePromo;
+      return { ...prev, sizePromos: newPromos };
     });
   };
 
@@ -137,6 +174,13 @@ export function ProductForm({ categories, availableSizes, availableCrusts, initi
       return;
     }
 
+    // Validação simples: não deixa salvar duas promoções pro mesmo tamanho
+    const sizeIds = form.sizePromos.map((p) => p.sizeId);
+    if (new Set(sizeIds).size !== sizeIds.length) {
+      setError("Você tem duas promoções configuradas para o mesmo tamanho. Remova uma delas.");
+      return;
+    }
+
     startTransition(async () => {
       const result = initialData
         ? await updateProductAction(initialData.id, form as any)
@@ -151,6 +195,10 @@ export function ProductForm({ categories, availableSizes, availableCrusts, initi
       router.refresh();
     });
   };
+
+  // Só faz sentido configurar promoção por tamanho se o produto for
+  // um sabor de pizza (isFlavorEligible) E a promoção estiver ativa.
+  const showSizePromoSection = form.isFlavorEligible && form.isPromoActive;
 
   return (
     <form onSubmit={handleSubmit} className="max-w-2xl space-y-4">
@@ -245,7 +293,6 @@ export function ProductForm({ categories, availableSizes, availableCrusts, initi
         </div>
       </div>
 
-      {/* NOVA SEÇÃO DE BORDAS AQUI */}
       <div className="space-y-2">
         <label className="block text-sm font-medium text-foreground-muted">Bordas Disponíveis</label>
         <div className="flex flex-wrap gap-4 rounded-lg border border-border p-3">
@@ -345,6 +392,59 @@ export function ProductForm({ categories, availableSizes, availableCrusts, initi
           Elegível como sabor de pizza
         </label>
       </div>
+
+      {/* SEÇÃO DE PROMOÇÃO POR TAMANHO — só aparece se for sabor de pizza + promoção ativa */}
+      {showSizePromoSection && (
+        <div className="space-y-2 rounded-lg border border-primary/30 bg-primary/5 p-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <label className="block text-sm font-medium text-foreground">
+                Promoção específica por tamanho
+              </label>
+              <p className="text-xs text-foreground-muted">
+                Este sabor terá o preço abaixo apenas quando pedido no tamanho selecionado.
+                Nos demais tamanhos, segue o preço padrão da tabela de tamanhos.
+              </p>
+            </div>
+            <Button type="button" variant="ghost" size="sm" onClick={addSizePromo} className="gap-1 shrink-0">
+              <Plus size={14} /> Novo
+            </Button>
+          </div>
+
+          {form.sizePromos.length === 0 && (
+            <p className="text-xs text-foreground-subtle italic">
+              Nenhuma promoção por tamanho configurada ainda.
+            </p>
+          )}
+
+          {form.sizePromos.map((promo, index) => (
+            <div key={index} className="flex gap-2">
+              <select
+                value={promo.sizeId}
+                onChange={(e) => updateSizePromo(index, "sizeId", e.target.value)}
+                className="flex-1 rounded-lg border border-border bg-background-surface px-3 py-2 text-sm"
+                required
+              >
+                {availableSizes.map((size) => (
+                  <option key={size.id} value={size.id}>{size.name}</option>
+                ))}
+              </select>
+              <input
+                type="number"
+                placeholder="Preço promocional"
+                step="0.01"
+                value={promo.promoPrice}
+                onChange={(e) => updateSizePromo(index, "promoPrice", Number(e.target.value))}
+                className="w-36 rounded-lg border border-border bg-background-surface px-3 py-2 text-sm"
+                required
+              />
+              <Button type="button" variant="ghost" className="text-red-500" onClick={() => removeSizePromo(index)}>
+                <Trash2 size={16} />
+              </Button>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="flex gap-3 pt-2">
         <Button type="submit" disabled={isPending || isProcessingImage}>

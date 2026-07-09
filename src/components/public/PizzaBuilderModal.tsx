@@ -11,6 +11,7 @@ interface FlavorOption {
   title: string;
   imageUrl: string;
   price: number;
+  sizePromos?: { sizeId: string; promoPrice: number }[];
 }
 
 export interface SizeOption {
@@ -59,6 +60,35 @@ export function PizzaBuilderModal({
   // Filtra bordas pelo tamanho selecionado
   const filteredCrusts = crusts.filter(c => c.sizeId === selectedSize?.id);
 
+  // BUSCA A PROMOÇÃO: Verifica se um sabor específico tem promoção para um tamanho específico
+  const getPromoForFlavor = (flavorId: string, sizeId: string) => {
+    const flavor = availableFlavors.find((f) => f.id === flavorId);
+    return flavor?.sizePromos?.find((p) => p.sizeId === sizeId)?.promoPrice;
+  };
+
+  // CALCULA PREÇO EFETIVO: Define se o tamanho vai usar o preço normal ou o promocional
+  const getEffectiveSizePrice = (size: SizeOption) => {
+    if (isPizza) {
+      // Regra 1: Se o cliente selecionou exatamente 1 sabor, verifica a promo dele
+      // Adicionado selectedFlavors[0] para satisfazer a checagem rigorosa do TS
+      if (selectedFlavors.length === 1 && selectedFlavors[0]) {
+        const promo = getPromoForFlavor(selectedFlavors[0].id, size.id);
+        if (promo !== undefined) return promo;
+      }
+      // Regra 2: Se o cliente ainda não selecionou sabores, mostramos o preço baseado no sabor da vitrine
+      if (selectedFlavors.length === 0) {
+        const promo = getPromoForFlavor(product.id, size.id);
+        if (promo !== undefined) return promo;
+      }
+      // Regra 3: Se escolheu 2 ou mais sabores (meio a meio), volta pro preço normal
+      return size.price;
+    }
+    
+    // Para lanches/itens simples
+    const promo = getPromoForFlavor(product.id, size.id);
+    return promo !== undefined ? promo : size.price;
+  };
+
   const toggleFlavor = (flavor: FlavorOption) => {
     const isAlreadySelected = selectedFlavors.some((f) => f.id === flavor.id);
     if (isAlreadySelected) {
@@ -74,6 +104,11 @@ export function PizzaBuilderModal({
     setSelectedCrust(null);
   };
 
+  // Recalcula os totais com base no preço efetivo (com ou sem promoção)
+  const currentSizeEffectivePrice = selectedSize ? getEffectiveSizePrice(selectedSize) : 0;
+  const totalPrice = currentSizeEffectivePrice + (selectedCrust?.price || 0);
+  const isPromoApplied = selectedSize && currentSizeEffectivePrice < selectedSize.price;
+
   const handleAddToCart = () => {
     if (!selectedSize) { alert("Selecione um tamanho!"); return; }
     if (isPizza && selectedFlavors.length === 0) { alert("Escolha pelo menos 1 sabor!"); return; }
@@ -82,23 +117,17 @@ export function PizzaBuilderModal({
       id: crypto.randomUUID(),
       productId: product.id,
       name: `${product.title} ${selectedSize.name} ${selectedCrust ? `(Borda: ${selectedCrust.name})` : ""}`,
-      price: (selectedSize.price + (selectedCrust?.price ?? 0)),
+      price: currentSizeEffectivePrice + (selectedCrust?.price ?? 0),
       quantity: 1,
       imageUrl: product.imageUrl,
       sizeId: selectedSize.id,
       sizeName: selectedSize.name,
       flavors: selectedFlavors.map((f) => ({ id: f.id, name: f.title })),
-      // 🔧 FIX: antes essas duas linhas não existiam. O crustId/crustName
-      // já influenciavam "name" (texto) e "price" (número), mas nunca eram
-      // salvos como campos próprios no CartItem — por isso a Server Action
-      // e o painel da cozinha recebiam null.
       crustId: selectedCrust?.id ?? null,
       crustName: selectedCrust?.name ?? null,
     });
     onClose();
   };
-
-  const totalPrice = (selectedSize?.price || 0) + (selectedCrust?.price || 0);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
@@ -113,12 +142,20 @@ export function PizzaBuilderModal({
           <section>
             <h3 className="mb-3 font-semibold text-foreground">1. Escolha o Tamanho *</h3>
             <div className="grid grid-cols-2 gap-3">
-              {sizeOptions.map((size) => (
-                <button key={size.id} onClick={() => handleSelectSize(size)} className={`p-3 rounded-xl border ${selectedSize?.id === size.id ? "border-primary bg-primary/10" : "border-border"}`}>
-                  <div className="font-medium text-foreground">{size.name}</div>
-                  <div className="text-sm text-primary font-bold">{formatCurrency(size.price)}</div>
-                </button>
-              ))}
+              {sizeOptions.map((size) => {
+                const effectivePrice = getEffectiveSizePrice(size);
+                const hasPromo = effectivePrice < size.price;
+
+                return (
+                  <button key={size.id} onClick={() => handleSelectSize(size)} className={`p-3 flex flex-col items-center justify-center rounded-xl border ${selectedSize?.id === size.id ? "border-primary bg-primary/10" : "border-border"}`}>
+                    <div className="font-medium text-foreground">{size.name}</div>
+                    <div className="flex items-center gap-2">
+                      {hasPromo && <span className="text-xs line-through text-foreground-muted">{formatCurrency(size.price)}</span>}
+                      <span className="text-sm text-primary font-bold">{formatCurrency(effectivePrice)}</span>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </section>
 
@@ -129,11 +166,20 @@ export function PizzaBuilderModal({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {availableFlavors.map((flavor) => {
                   const isSelected = selectedFlavors.some((f) => f.id === flavor.id);
+                  const promoPrice = selectedSize ? getPromoForFlavor(flavor.id, selectedSize.id) : undefined;
+
                   return (
-                    <button key={flavor.id} onClick={() => toggleFlavor(flavor)} className={`flex items-center gap-3 p-2 rounded-xl border ${isSelected ? "border-primary bg-primary/5" : "border-border"}`}>
-                      <div className="relative h-10 w-10 overflow-hidden rounded"><Image src={flavor.imageUrl} alt={flavor.title} fill className="object-cover" /></div>
-                      <span className="flex-1 text-sm text-foreground">{flavor.title}</span>
-                      {isSelected && <Check size={16} className="text-primary" />}
+                    <button key={flavor.id} onClick={() => toggleFlavor(flavor)} className={`flex items-center gap-3 p-2 rounded-xl border text-left ${isSelected ? "border-primary bg-primary/5" : "border-border"}`}>
+                      <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded"><Image src={flavor.imageUrl} alt={flavor.title} fill className="object-cover" /></div>
+                      <div className="flex-1 flex flex-col">
+                        <span className="text-sm text-foreground line-clamp-1">{flavor.title}</span>
+                        {promoPrice !== undefined && (
+                          <span className="text-[10px] text-primary font-semibold w-fit">
+                            🔥 Promocional: {formatCurrency(promoPrice)}
+                          </span>
+                        )}
+                      </div>
+                      {isSelected && <Check size={16} className="text-primary shrink-0" />}
                     </button>
                   );
                 })}
@@ -149,7 +195,7 @@ export function PizzaBuilderModal({
                 {filteredCrusts.map((crust) => (
                   <button key={crust.id} onClick={() => setSelectedCrust(crust)} className={`w-full flex justify-between p-3 rounded-xl border ${selectedCrust?.id === crust.id ? "border-primary bg-primary/5" : "border-border"}`}>
                     <span className="text-foreground">{crust.name}</span>
-                    <span className="font-bold text-primary">{formatCurrency(crust.price)}</span>
+                    <span className="font-bold text-primary">+ {formatCurrency(crust.price)}</span>
                   </button>
                 ))}
               </div>
@@ -158,6 +204,12 @@ export function PizzaBuilderModal({
         </div>
 
         <div className="p-4 border-t border-border bg-background-elevated">
+          {isPromoApplied && (
+            <div className="text-center text-primary text-xs font-bold mb-3 uppercase tracking-wide">
+              🔥 Preço promocional de sabor único aplicado
+            </div>
+          )}
+          
           <button
             onClick={handleAddToCart}
             disabled={!selectedSize || (isPizza && selectedFlavors.length === 0)}

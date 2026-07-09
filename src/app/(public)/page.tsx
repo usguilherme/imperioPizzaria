@@ -18,11 +18,18 @@ export default async function HomePage() {
     categoriesMap.set(category.slug, category.products);
   }
 
-  const flavorOptions = flavorEligible.map((f) => ({
+  // 🆕 flavorOptions agora também repassa sizePromos, convertendo o
+  // Decimal do Prisma para number antes de virar prop de Client Component.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const flavorOptions = flavorEligible.map((f: any) => ({
     id: f.id,
     title: f.title,
     imageUrl: f.imageUrl,
     price: f.isPromoActive && f.promoPrice ? Number(f.promoPrice) : Number(f.originalPrice ?? 0),
+    sizePromos: (f.sizePromos ?? []).map((sp: { sizeId: string; promoPrice: unknown }) => ({
+      sizeId: sp.sizeId,
+      promoPrice: Number(sp.promoPrice),
+    })),
   }));
 
   function mapSizesToOptions(sizes: { id: string; name: string; price: unknown; maxFlavors?: number }[]) {
@@ -36,10 +43,6 @@ export default async function HomePage() {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   function mapProduct(p: any) {
-    // LOG ADICIONADO PARA DEPURAR NO F12
-    console.log(`Processando: ${p.title} | Bordas:`, p.availableCrusts);
-
-    // Blindagem: pega a lista de bordas venha ela com o nome que vier do Prisma
     const rawCrusts = p.availableCrusts || p.pizzaCrusts || p.crusts || [];
 
     return {
@@ -53,10 +56,9 @@ export default async function HomePage() {
       isPromoActive: p.isPromoActive,
       isPizza: p.type === "PIZZA",
       addons: p.addons ? p.addons.map((a: { name: string; price: unknown }) => ({ name: a.name, price: Number(a.price) })) : [],
-      
+
       sizeOptions: p.availableSizes ? mapSizesToOptions(p.availableSizes) : [],
-      
-      // CORREÇÃO: O nome TEM que ser availableCrusts para o modal ler
+
       availableCrusts: rawCrusts.map((c: any) => ({
         id: c.id,
         name: c.name,

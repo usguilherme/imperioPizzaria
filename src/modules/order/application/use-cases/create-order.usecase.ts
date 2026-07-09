@@ -40,23 +40,39 @@ export async function createOrderUseCase(
       }
 
       const flavorOne = await prisma.product.findUnique({ where: { id: item.pizza.flavorOneId } });
-      
-      // A MÁGICA FOI AQUI: Removemos a obrigatoriedade do isFlavorEligible para o sabor principal.
-      // Se a pessoa pediu a pizza inteira de um sabor só, ele não precisa dessa restrição!
+
       if (!flavorOne) {
         return { success: false, error: "Sabor principal inválido" };
       }
 
       if (item.pizza.flavorTwoId) {
         const flavorTwo = await prisma.product.findUnique({ where: { id: item.pizza.flavorTwoId } });
-        // O sabor 2 (para pizza meio a meio) continua com a regra rigorosa
         if (!flavorTwo || !flavorTwo.isFlavorEligible) {
           return { success: false, error: "Sabor 2 inválido ou não elegível para meio a meio" };
         }
       }
 
-      // Preço da pizza = preço do TAMANHO escolhido (fixo, compartilhado entre produtos)
+      // Preço base = preço do TAMANHO escolhido (fixo, compartilhado entre produtos)
       unitPrice = Number(size.price);
+
+      // 🆕 PROMOÇÃO DE SABOR POR TAMANHO
+      // Só se aplica em pizza de sabor único (sem flavorTwo) e com o
+      // campo isPromoActive do Product ligado. Isso reaproveita o
+      // checkbox "Promoção ativa" já existente como gate da promoção.
+      if (!item.pizza.flavorTwoId && flavorOne.isPromoActive) {
+        const sizePromo = await prisma.pizzaFlavorSizePromo.findUnique({
+          where: {
+            productId_sizeId: {
+              productId: flavorOne.id,
+              sizeId: item.pizza.sizeId,
+            },
+          },
+        });
+
+        if (sizePromo) {
+          unitPrice = Number(sizePromo.promoPrice);
+        }
+      }
 
       if (item.pizza.crustId) {
         const crust = await prisma.pizzaCrust.findUnique({ where: { id: item.pizza.crustId } });

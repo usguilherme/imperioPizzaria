@@ -10,7 +10,8 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
   const [product, categories, sizes, crusts] = await Promise.all([
     prisma.product.findUnique({ 
       where: { id: params.id },
-      include: { availableSizes: true, addons: true, availableCrusts: true } 
+      // 🆕 AQUI ESTAVA O FURO! Adicionamos o sizePromos: true
+      include: { availableSizes: true, addons: true, availableCrusts: true, sizePromos: true } 
     }),
     prisma.category.findMany({ where: { isActive: true }, orderBy: { order: "asc" } }),
     prisma.pizzaSize.findMany({ where: { isActive: true } }),
@@ -44,6 +45,11 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
           addons: product.addons.map((a: { name: string; price: any }) => ({
             name: a.name,
             price: Number(a.price),
+          })),
+          // 🆕 AQUI! Passando as promoções para o formulário e convertendo o Decimal pra Number
+          sizePromos: product.sizePromos.map((sp: { sizeId: string; promoPrice: any }) => ({
+            sizeId: sp.sizeId,
+            promoPrice: Number(sp.promoPrice),
           })),
         }}
       />
