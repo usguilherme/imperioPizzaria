@@ -102,7 +102,7 @@ model Product {
   flavorOne        PizzaFlavorCombination[] @relation("FlavorOne")
   flavorTwo        PizzaFlavorCombination[] @relation("FlavorTwo")
   availableSizes   PizzaSize[] @relation("ProductSizes")
-  availableCrusts  PizzaCrust[] @relation("ProductCrusts") // BORDAS ADICIONADAS AQUI
+  availableCrusts  PizzaCrust[] @relation("ProductCrusts")
 
   createdAt        DateTime    @default(now())
   updatedAt        DateTime    @updatedAt
@@ -134,6 +134,8 @@ model PizzaSize {
 
   pizzaCombinations PizzaFlavorCombination[]
   products          Product[] @relation("ProductSizes")
+  // Relação inversa para as bordas deste tamanho
+  crusts            PizzaCrust[] 
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -150,6 +152,10 @@ model PizzaCrust {
   name        String
   price       Decimal  @db.Decimal(10, 2)
   isActive    Boolean  @default(true)
+
+  // RELAÇÃO ADICIONADA: Agora a borda pertence a um tamanho específico 
+  sizeId      String?
+  size        PizzaSize? @relation(fields: [sizeId], references: [id])
 
   pizzaCombinations PizzaFlavorCombination[]
   products          Product[] @relation("ProductCrusts")
@@ -180,7 +186,7 @@ model PizzaFlavorCombination {
   flavorTwo   Product?  @relation("FlavorTwo", fields: [flavorTwoId], references: [id])
 
   crustId     String?
-  crust       PizzaCrust? @relation(fields: [crustId], references: [id]) // RELAÇÃO COM A BORDA NO PEDIDO
+  crust       PizzaCrust? @relation(fields: [crustId], references: [id])
 
   @@map("pizza_flavor_combinations")
 }
@@ -197,7 +203,7 @@ model Order {
   customerPhone     String
   deliveryAddress   String        @db.Text
   addressComplement String?
-  neighborhood      String?       // Campo adicionado para o bairro
+  neighborhood      String?
 
   status            OrderStatus   @default(PENDING)
   paymentMethod     PaymentMethod
@@ -208,7 +214,6 @@ model Order {
 
   notes             String?       @db.Text
 
-  // NOVA COLUNA PARA IMPRESSÃO TÉRMICA
   isPrinted         Boolean       @default(false)
 
   attendantId       String?

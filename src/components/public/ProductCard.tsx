@@ -17,8 +17,14 @@ export interface ProductCardProps {
   promoPrice?: number | null;
   isPromoActive: boolean;
   isPizza?: boolean;
-  addons?: { name: string; price: number }[];
+  
+  // Opções de tamanho
   sizeOptions?: SizeOption[];
+  
+  // Bordas (crusts) e Adicionais (addons)
+  crusts?: { id: string; name: string; price: number; sizeId: string }[];
+  addons?: { name: string; price: number }[];
+  
   onConfigurePizza?: (productId: string) => void;
 }
 

@@ -31,7 +31,9 @@ export function ProductGrid({ products, flavorOptions }: ProductGridProps) {
             title: selectedPizza.title,
             imageUrl: selectedPizza.imageUrl,
             isPizza: selectedPizza.isPizza,
-            availableAddons: selectedPizza.addons, // Passando os adicionais do produto para o modal
+            // Certifique-se de que selectedPizza possui essas propriedades no seu tipo ProductCardProps
+            availableCrusts: selectedPizza.crusts, 
+            availableAddons: selectedPizza.addons,
           }}
           availableFlavors={flavorOptions}
           sizeOptions={selectedPizza.sizeOptions ?? []}

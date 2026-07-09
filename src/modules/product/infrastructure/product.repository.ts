@@ -14,6 +14,7 @@ export interface CreateProductInput {
   isFlavorEligible: boolean;
   categoryId: string;
   availableSizeIds?: string[];
+  availableCrustIds?: string[]; // Adicionado para suportar bordas na criação
 }
 
 export interface UpdateProductInput extends Partial<CreateProductInput> {}
@@ -35,6 +36,9 @@ export class ProductRepository {
         categoryId: data.categoryId,
         availableSizes: {
           connect: data.availableSizeIds?.map((id) => ({ id })) || [],
+        },
+        availableCrusts: {
+          connect: data.availableCrustIds?.map((id) => ({ id })) || [],
         },
       },
     });
@@ -58,6 +62,9 @@ export class ProductRepository {
         availableSizes: data.availableSizeIds !== undefined ? {
           set: data.availableSizeIds.map((id) => ({ id })),
         } : undefined,
+        availableCrusts: data.availableCrustIds !== undefined ? {
+          set: data.availableCrustIds.map((id) => ({ id })),
+        } : undefined,
       },
     });
   }
@@ -65,13 +72,13 @@ export class ProductRepository {
   async findById(id: string) {
     return prisma.product.findUnique({
       where: { id },
-      include: { category: true, availableSizes: true, addons: true },
+      include: { category: true, availableSizes: true, addons: true, availableCrusts: true },
     });
   }
 
   async findAll() {
     return prisma.product.findMany({
-      include: { category: true, availableSizes: true, addons: true },
+      include: { category: true, availableSizes: true, addons: true, availableCrusts: true },
       orderBy: { createdAt: "desc" },
     });
   }
@@ -93,7 +100,11 @@ export class ProductRepository {
       include: {
         products: {
           where: { isAvailable: true },
-          include: { availableSizes: true, addons: true },
+          include: { 
+            availableSizes: true, 
+            addons: true, 
+            availableCrusts: true 
+          },
           orderBy: { title: "asc" },
         },
       },

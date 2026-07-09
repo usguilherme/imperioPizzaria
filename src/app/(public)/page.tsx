@@ -18,7 +18,6 @@ export default async function HomePage() {
     categoriesMap.set(category.slug, category.products);
   }
 
-  // Sabores disponíveis para a montagem de pizza (usados como availableFlavors no modal)
   const flavorOptions = flavorEligible.map((f) => ({
     id: f.id,
     title: f.title,
@@ -26,14 +25,6 @@ export default async function HomePage() {
     price: f.isPromoActive && f.promoPrice ? Number(f.promoPrice) : Number(f.originalPrice ?? 0),
   }));
 
-  /**
-   * Mapeia os registros de `Size` (tabela compartilhada, conectada ao produto
-   * via `availableSizes`) para o formato SizeOption que o PizzaBuilderModal espera.
-   *
-   * Assumindo que o model `Size` tem os campos: id, name, price, maxFlavors.
-   * Se o campo `maxFlavors` não existir no seu `Size` (ex: só id/name/price),
-   * troque a linha `maxFlavors: s.maxFlavors ?? 2` por `maxFlavors: 2` fixo.
-   */
   function mapSizesToOptions(sizes: { id: string; name: string; price: unknown; maxFlavors?: number }[]) {
     return sizes.map((s) => ({
       id: s.id,
@@ -56,8 +47,17 @@ export default async function HomePage() {
       isPromoActive: p.isPromoActive,
       isPizza: p.type === "PIZZA",
       addons: p.addons ? p.addons.map((a: { name: string; price: unknown }) => ({ name: a.name, price: Number(a.price) })) : [],
-      // NOVO: tamanhos deste produto, vindos do relacionamento availableSizes
+      
+      // CORREÇÃO: Mapeando os tamanhos
       sizeOptions: p.availableSizes ? mapSizesToOptions(p.availableSizes) : [],
+      
+      // CORREÇÃO: Adicionando o mapeamento de bordas (Crusts)
+      crusts: p.availableCrusts ? p.availableCrusts.map((c: any) => ({
+        id: c.id,
+        name: c.name,
+        price: Number(c.price),
+        sizeId: c.sizeId
+      })) : [],
     };
   }
 
