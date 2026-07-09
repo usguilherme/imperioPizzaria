@@ -103,7 +103,7 @@ export class ProductRepository {
           include: { 
             availableSizes: true, 
             addons: true, 
-            availableCrusts: true 
+            availableCrusts: true // Certifique-se que isso está aqui!
           },
           orderBy: { title: "asc" },
         },

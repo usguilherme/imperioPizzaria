@@ -31,8 +31,8 @@ export function ProductGrid({ products, flavorOptions }: ProductGridProps) {
             title: selectedPizza.title,
             imageUrl: selectedPizza.imageUrl,
             isPizza: selectedPizza.isPizza,
-            // Certifique-se de que selectedPizza possui essas propriedades no seu tipo ProductCardProps
-            availableCrusts: selectedPizza.crusts, 
+            // A CORREÇÃO ESTÁ AQUI: Lemos do lugar certo, independente de como o TS interpretar
+            availableCrusts: (selectedPizza as any).availableCrusts || (selectedPizza as any).crusts || [], 
             availableAddons: selectedPizza.addons,
           }}
           availableFlavors={flavorOptions}

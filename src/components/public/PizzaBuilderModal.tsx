@@ -34,7 +34,7 @@ interface PizzaBuilderModalProps {
     imageUrl: string;
     isPizza?: boolean;
     availableCrusts?: CrustOption[];
-    availableAddons?: { name: string; price: number }[]; // Adicione esta linha
+    availableAddons?: { name: string; price: number }[];
   };
   availableFlavors: FlavorOption[];
   sizeOptions: SizeOption[];
@@ -47,8 +47,6 @@ export function PizzaBuilderModal({
   sizeOptions,
   onClose,
 }: PizzaBuilderModalProps) {
-  console.log("Produto no Modal:", product);
-  console.log("Sabores disponíveis:", availableFlavors);
   const addItem = useCartStore((state) => state.addItem);
 
   const [selectedSize, setSelectedSize] = useState<SizeOption | null>(null);
@@ -60,6 +58,11 @@ export function PizzaBuilderModal({
   
   // Filtra bordas pelo tamanho selecionado
   const filteredCrusts = crusts.filter(c => c.sizeId === selectedSize?.id);
+
+  // DEBUG PARA O CONSOLE (F12) - Isso vai nos salvar!
+  console.log("1. Produto inteiro:", product);
+  console.log("2. Total de Bordas que chegaram:", crusts);
+  console.log("3. Bordas Filtradas para o tamanho atual:", filteredCrusts);
 
   const toggleFlavor = (flavor: FlavorOption) => {
     const isAlreadySelected = selectedFlavors.some((f) => f.id === flavor.id);

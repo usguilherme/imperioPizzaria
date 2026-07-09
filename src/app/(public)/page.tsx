@@ -36,6 +36,12 @@ export default async function HomePage() {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   function mapProduct(p: any) {
+    // LOG ADICIONADO PARA DEPURAR NO F12
+    console.log(`Processando: ${p.title} | Bordas:`, p.availableCrusts);
+
+    // Blindagem: pega a lista de bordas venha ela com o nome que vier do Prisma
+    const rawCrusts = p.availableCrusts || p.pizzaCrusts || p.crusts || [];
+
     return {
       id: p.id,
       title: p.title,
@@ -48,16 +54,15 @@ export default async function HomePage() {
       isPizza: p.type === "PIZZA",
       addons: p.addons ? p.addons.map((a: { name: string; price: unknown }) => ({ name: a.name, price: Number(a.price) })) : [],
       
-      // CORREÇÃO: Mapeando os tamanhos
       sizeOptions: p.availableSizes ? mapSizesToOptions(p.availableSizes) : [],
       
-      // CORREÇÃO: Adicionando o mapeamento de bordas (Crusts)
-      crusts: p.availableCrusts ? p.availableCrusts.map((c: any) => ({
+      // CORREÇÃO: O nome TEM que ser availableCrusts para o modal ler
+      availableCrusts: rawCrusts.map((c: any) => ({
         id: c.id,
         name: c.name,
         price: Number(c.price),
         sizeId: c.sizeId
-      })) : [],
+      })),
     };
   }
 
