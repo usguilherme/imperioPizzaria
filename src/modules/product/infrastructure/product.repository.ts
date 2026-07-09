@@ -14,13 +14,22 @@ export interface CreateProductInput {
   isFlavorEligible: boolean;
   categoryId: string;
   availableSizeIds?: string[];
-  availableCrustIds?: string[]; // Adicionado para suportar bordas na criação
+  availableCrustIds?: string[];
 }
 
 export interface UpdateProductInput extends Partial<CreateProductInput> {}
 
 export class ProductRepository {
   async create(data: CreateProductInput) {
+    // LÓGICA DE AUTOMATIZAÇÃO:
+    // Se for pizza e não enviaram bordas específicas, conecta TODAS do banco.
+    let crustsToConnect: { id: string }[] = data.availableCrustIds?.map((id) => ({ id })) || [];
+    
+    if (data.type === 'PIZZA' && crustsToConnect.length === 0) {
+      const allCrusts = await prisma.pizzaCrust.findMany({ select: { id: true } });
+      crustsToConnect = allCrusts;
+    }
+
     return prisma.product.create({
       data: {
         title: data.title,
@@ -38,7 +47,7 @@ export class ProductRepository {
           connect: data.availableSizeIds?.map((id) => ({ id })) || [],
         },
         availableCrusts: {
-          connect: data.availableCrustIds?.map((id) => ({ id })) || [],
+          connect: crustsToConnect,
         },
       },
     });
@@ -103,7 +112,7 @@ export class ProductRepository {
           include: { 
             availableSizes: true, 
             addons: true, 
-            availableCrusts: true // Certifique-se que isso está aqui!
+            availableCrusts: true 
           },
           orderBy: { title: "asc" },
         },
