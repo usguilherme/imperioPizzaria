@@ -55,14 +55,9 @@ export function PizzaBuilderModal({
 
   const isPizza = product.isPizza ?? false;
   const crusts = product.availableCrusts ?? [];
-  
+
   // Filtra bordas pelo tamanho selecionado
   const filteredCrusts = crusts.filter(c => c.sizeId === selectedSize?.id);
-
-  // DEBUG PARA O CONSOLE (F12) - Isso vai nos salvar!
-  console.log("1. Produto inteiro:", product);
-  console.log("2. Total de Bordas que chegaram:", crusts);
-  console.log("3. Bordas Filtradas para o tamanho atual:", filteredCrusts);
 
   const toggleFlavor = (flavor: FlavorOption) => {
     const isAlreadySelected = selectedFlavors.some((f) => f.id === flavor.id);
@@ -75,8 +70,8 @@ export function PizzaBuilderModal({
 
   const handleSelectSize = (size: SizeOption) => {
     setSelectedSize(size);
-    setSelectedFlavors([]); 
-    setSelectedCrust(null); 
+    setSelectedFlavors([]);
+    setSelectedCrust(null);
   };
 
   const handleAddToCart = () => {
@@ -93,6 +88,12 @@ export function PizzaBuilderModal({
       sizeId: selectedSize.id,
       sizeName: selectedSize.name,
       flavors: selectedFlavors.map((f) => ({ id: f.id, name: f.title })),
+      // 🔧 FIX: antes essas duas linhas não existiam. O crustId/crustName
+      // já influenciavam "name" (texto) e "price" (número), mas nunca eram
+      // salvos como campos próprios no CartItem — por isso a Server Action
+      // e o painel da cozinha recebiam null.
+      crustId: selectedCrust?.id ?? null,
+      crustName: selectedCrust?.name ?? null,
     });
     onClose();
   };
@@ -157,13 +158,13 @@ export function PizzaBuilderModal({
         </div>
 
         <div className="p-4 border-t border-border bg-background-elevated">
-          <button 
-            onClick={handleAddToCart} 
-            disabled={!selectedSize || (isPizza && selectedFlavors.length === 0)} 
+          <button
+            onClick={handleAddToCart}
+            disabled={!selectedSize || (isPizza && selectedFlavors.length === 0)}
             className="w-full bg-primary text-white py-3 rounded-xl font-bold transition-transform hover:scale-[1.02] disabled:opacity-50"
           >
-            {selectedSize 
-              ? (isPizza && selectedFlavors.length === 0 ? "Escolha os sabores" : `Adicionar - ${formatCurrency(totalPrice)}`) 
+            {selectedSize
+              ? (isPizza && selectedFlavors.length === 0 ? "Escolha os sabores" : `Adicionar - ${formatCurrency(totalPrice)}`)
               : "Selecione um tamanho"}
           </button>
         </div>
