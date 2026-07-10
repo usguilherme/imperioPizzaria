@@ -40,7 +40,7 @@ export default function CheckoutPage() {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
-  // --- Estados para o fluxo iOS ---
+  // --- Estados para o fluxo iOS/Desktop ---
   const [isIOS, setIsIOS] = useState(false);
   const [showWhatsappCard, setShowWhatsappCard] = useState(false);
   const [iosWhatsappUrl, setIosWhatsappUrl] = useState<string | null>(null);
@@ -135,19 +135,21 @@ export default function CheckoutPage() {
         message += `\n*Observações:* ${form.notes}`;
       }
 
-      const whatsappUrl = `https://wa.me/5583988738301?text=${encodeURIComponent(message)}`;
+      // CORREÇÃO: Detecta se é computador para forçar o WhatsApp Web
+      const isDesktopUser = !(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
+      
+      const whatsappUrl = isDesktopUser 
+        ? `https://web.whatsapp.com/send?phone=5583988738301&text=${encodeURIComponent(message)}`
+        : `https://api.whatsapp.com/send?phone=5583988738301&text=${encodeURIComponent(message)}`;
 
-      if (isIOS) {
-        // iOS: NÃO chamamos window.open aqui (o Safari bloqueia após um await).
-        // Guardamos a URL e o código, limpamos o carrinho e exibimos o card
-        // com o link, que será aberto por um clique real do usuário.
+      if (isIOS || isDesktopUser) {
+        // iOS ou Desktop: Exibe o card para evitar o bloqueador de pop-ups agressivo do navegador.
         setIosWhatsappUrl(whatsappUrl);
         setOrderCode(result.code ?? null);
         clearCart();
         setShowWhatsappCard(true);
       } else {
-        // Android/Desktop: abre o WhatsApp automaticamente, limpa o carrinho
-        // e redireciona para a página de confirmação.
+        // Android: Abre direto
         window.open(whatsappUrl, "_blank");
         clearCart();
         router.push(`/pedido-confirmado?code=${result.code ?? ""}`);
@@ -159,7 +161,7 @@ export default function CheckoutPage() {
     <div className="mx-auto max-w-2xl px-4 py-8">
       <h1 className="mb-6 font-display text-2xl font-bold text-foreground">Checkout</h1>
 
-      {/* Card verde exibido apenas no iOS, após o pedido ser salvo */}
+      {/* Card verde exibido no iOS ou no Computador após o pedido ser salvo */}
       {showWhatsappCard && iosWhatsappUrl ? (
         <div className="rounded-xl bg-green-600 text-white p-6 text-center shadow-lg space-y-4">
           <p className="font-semibold text-lg">
@@ -170,8 +172,7 @@ export default function CheckoutPage() {
             target="_blank"
             rel="noopener noreferrer"
             onClick={() => {
-              // Clique manual do usuário: navegação permitida pelo Safari.
-              // Redirecionamos logo em seguida para a página de confirmação.
+              // Clique manual do usuário: navegação permitida.
               router.push(`/pedido-confirmado?code=${orderCode}`);
             }}
             className="inline-block bg-white text-green-700 font-bold py-3 px-6 rounded-lg"
@@ -181,7 +182,7 @@ export default function CheckoutPage() {
         </div>
       ) : (
         <>
-          {/* NOVIDADE: Resumo visual do pedido para o cliente ver o Bacon e Cheddar */}
+          {/* Resumo visual do pedido */}
           {items.length > 0 && (
             <div className="mb-6 space-y-3 rounded-lg border border-border bg-background-surface p-4">
               <h2 className="text-sm font-semibold text-foreground-muted uppercase tracking-wider">Resumo do Pedido</h2>
