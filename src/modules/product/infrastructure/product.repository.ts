@@ -86,7 +86,7 @@ export class ProductRepository {
         availableSizes: true,
         addons: true,
         availableCrusts: true,
-        sizePromos: true, // 🆕 necessário para o admin pré-carregar promoções ao editar
+        sizePromos: true, // necessário para o admin pré-carregar promoções ao editar
       },
     });
   }
@@ -118,7 +118,8 @@ export class ProductRepository {
           include: { 
             availableSizes: true, 
             addons: true, 
-            availableCrusts: true 
+            availableCrusts: true,
+            sizePromos: true // 🆕 AGORA SIM! A vitrine vai enxergar as promoções!
           },
           orderBy: { title: "asc" },
         },
@@ -132,7 +133,7 @@ export class ProductRepository {
       where: { isFlavorEligible: true, isAvailable: true },
       include: {
         availableSizes: true,
-        sizePromos: true, // 🆕 necessário para o cardápio calcular/exibir a promoção por tamanho
+        sizePromos: true, // necessário para o cardápio calcular/exibir a promoção por tamanho
       },
     });
   }

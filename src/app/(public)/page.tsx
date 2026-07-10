@@ -18,8 +18,6 @@ export default async function HomePage() {
     categoriesMap.set(category.slug, category.products);
   }
 
-  // 🆕 flavorOptions agora também repassa sizePromos, convertendo o
-  // Decimal do Prisma para number antes de virar prop de Client Component.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const flavorOptions = flavorEligible.map((f: any) => ({
     id: f.id,
@@ -56,8 +54,12 @@ export default async function HomePage() {
       isPromoActive: p.isPromoActive,
       isPizza: p.type === "PIZZA",
       addons: p.addons ? p.addons.map((a: { name: string; price: unknown }) => ({ name: a.name, price: Number(a.price) })) : [],
-
       sizeOptions: p.availableSizes ? mapSizesToOptions(p.availableSizes) : [],
+      // 🆕 INJETAMOS O sizePromos AQUI para o cardápio poder passar para o ProductCard!
+      sizePromos: p.sizePromos ? p.sizePromos.map((sp: any) => ({
+        sizeId: sp.sizeId,
+        promoPrice: Number(sp.promoPrice)
+      })) : [],
 
       availableCrusts: rawCrusts.map((c: any) => ({
         id: c.id,

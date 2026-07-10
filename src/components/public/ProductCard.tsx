@@ -21,6 +21,9 @@ export interface ProductCardProps {
   // Opções de tamanho
   sizeOptions?: SizeOption[];
   
+  // Promos de tamanho para o card poder calcular o menor preço exato
+  sizePromos?: { sizeId: string; promoPrice: number }[];
+  
   // Bordas (crusts) e Adicionais (addons)
   crusts?: { id: string; name: string; price: number; sizeId: string }[];
   addons?: { name: string; price: number }[];
@@ -40,18 +43,34 @@ export function ProductCard({
   isPizza = false,
   addons = [],
   sizeOptions = [],
+  sizePromos = [],
   onConfigurePizza,
 }: ProductCardProps) {
   const addItem = useCartStore((state) => state.addItem);
   const router = useRouter();
 
-  const hasDiscount = isPromoActive && promoPrice != null && originalPrice != null && promoPrice < originalPrice;
+  const hasAddons = addons && addons.length > 0;
+  const hasSizes = sizeOptions && sizeOptions.length > 0;
+
+  // Descobre o menor preço possível para exibir "A partir de"
+  let startingPrice = 0;
+  if (hasSizes) {
+    const prices = sizeOptions.map((size) => {
+      const promo = sizePromos.find((p) => p.sizeId === size.id);
+      return promo !== undefined ? promo.promoPrice : size.price;
+    });
+    if (prices.length > 0) {
+      startingPrice = Math.min(...prices);
+    }
+  }
+
+  const showStartingPrice = (isPizza || hasSizes) && startingPrice > 0;
+
+  // O desconto geral da flag só é exibido se NÃO for um item "A partir de"
+  const hasDiscount = !showStartingPrice && isPromoActive && promoPrice != null && originalPrice != null && promoPrice < originalPrice;
   const discountPercent =
     hasDiscount && originalPrice ? Math.round(((originalPrice - promoPrice!) / originalPrice) * 100) : 0;
   const finalPrice = hasDiscount ? promoPrice! : originalPrice ?? 0;
-
-  const hasAddons = addons && addons.length > 0;
-  const hasSizes = sizeOptions && sizeOptions.length > 0;
 
   const handleAction = () => {
     // Se for pizza OU se o produto tiver tamanhos cadastrados, abre o modal de configuração
@@ -115,14 +134,26 @@ export function ProductCard({
 
         <div className="mt-auto flex items-end justify-between pt-3">
           <div className="flex flex-col">
-            {hasDiscount && (
-              <div className="text-xs text-foreground-subtle line-through">
-                {formatCurrency(originalPrice!)}
-              </div>
+            {/* Lógica condicional de exibição de preço */}
+            {showStartingPrice ? (
+              <>
+                <div className="text-xs text-foreground-subtle">A partir de</div>
+                <div className="font-display text-xl font-bold text-primary">
+                  {formatCurrency(startingPrice)}
+                </div>
+              </>
+            ) : (
+              <>
+                {hasDiscount && (
+                  <div className="text-xs text-foreground-subtle line-through">
+                    {formatCurrency(originalPrice!)}
+                  </div>
+                )}
+                <div className="font-display text-xl font-bold text-primary">
+                  {formatCurrency(finalPrice)}
+                </div>
+              </>
             )}
-            <div className="font-display text-xl font-bold text-primary">
-              {formatCurrency(finalPrice)}
-            </div>
           </div>
 
           <button
