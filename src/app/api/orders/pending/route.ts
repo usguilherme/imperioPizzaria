@@ -1,19 +1,29 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma"; 
+import { OrderStatus } from "@prisma/client";
 
-// Força o Next.js a sempre executar esta rota no servidor, sem cache
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
     const pendingOrders = await prisma.order.findMany({
-      where: { isPrinted: false },
+      where: {
+        status: {
+          notIn: [
+            OrderStatus.OUT_FOR_DELIVERY, 
+            OrderStatus.DELIVERED, 
+            OrderStatus.CANCELED
+          ]
+        }
+      },
+      // Certifique-se de incluir o campo 'notes' aqui se o Prisma exigir
+      // (Por padrão o prisma já traz todos os campos, mas a formatação abaixo pode estar filtrando)
       include: { 
         items: {
           include: { 
             product: true,
-            addons: true, // Pegamos os adicionais direto, sem erro!
-            pizzaCombination: { // Entramos na relação da pizza para pegar os detalhes
+            addons: true,
+            pizzaCombination: {
               include: {
                 size: true,
                 crust: true,
@@ -22,23 +32,20 @@ export async function GET() {
               }
             }
           }
-        } 
+        }
       },
       orderBy: { createdAt: "asc" },
     });
     
-    // MÁGICA AQUI: Vamos formatar os dados para bater exatamente com o que 
-    // o seu frontend da cozinha já está esperando para imprimir.
-    const formattedOrders = pendingOrders.map(order => ({
-      ...order,
-      items: order.items.map(item => {
+    // CORREÇÃO: Certifique-se de manter o 'notes' no spread operator (...)
+    const formattedOrders = pendingOrders.map((order: any) => ({
+      ...order, // Isso garante que 'notes', 'customerName', etc, continuem aqui
+      items: order.items.map((item: any) => {
         const combo = item.pizzaCombination;
         return {
           ...item,
-          // Se for pizza, puxamos os nomes de dentro do combo para a raiz do item
           sizeName: combo?.size?.name || null,
           crustName: combo?.crust?.name || null,
-          // Juntamos os sabores em um array só, tirando os vazios
           flavors: combo ? [combo.flavorOne, combo.flavorTwo].filter(Boolean) : []
         };
       })
