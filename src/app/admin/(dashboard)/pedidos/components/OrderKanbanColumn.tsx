@@ -49,6 +49,15 @@ export function OrderKanbanColumn({
     startTransition(() => { deleteOrderAction(orderId); });
   };
 
+  // Função auxiliar para gerar o link do WhatsApp corrigido
+  const getWhatsAppLink = (phone: string, message: string) => {
+    // Remove tudo que não é número
+    const cleanPhone = phone.replace(/\D/g, "");
+    // Se não começar com 55, adiciona. Se já tiver 55, mantém.
+    const finalPhone = cleanPhone.startsWith("55") ? cleanPhone : `55${cleanPhone}`;
+    return `https://wa.me/${finalPhone}?text=${encodeURIComponent(message)}`;
+  };
+
   const columnTotal = orders.reduce((sum, o) => sum + o.total, 0);
 
   return (
@@ -96,10 +105,9 @@ export function OrderKanbanColumn({
                   </button>
                 )}
                 
-                {/* Botão WhatsApp no Card com codificação segura */}
                 {order.customerPhone && (
                   <a
-                    href={`https://wa.me/55${order.customerPhone.replace(/\D/g, '')}?text=${encodeURIComponent(`Olá, ${order.customerName}! Seu pedido #${order.code} está pronto.`)}`}
+                    href={getWhatsAppLink(order.customerPhone, `Olá, ${order.customerName}! Seu pedido #${order.code} está pronto.`)}
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={(e) => e.stopPropagation()}
@@ -135,10 +143,9 @@ export function OrderKanbanColumn({
               <p><strong>Endereço:</strong> {selectedOrder.customerAddress || "Não informado"}</p>
               <p><strong>Total:</strong> {formatCurrency(selectedOrder.total)}</p>
               
-              {/* Botão WhatsApp no Modal com codificação segura */}
               {selectedOrder.customerPhone && (
                 <a
-                  href={`https://wa.me/55${selectedOrder.customerPhone.replace(/\D/g, '')}?text=${encodeURIComponent(`Olá, ${selectedOrder.customerName}! Seu pedido #${selectedOrder.code} está pronto.`)}`}
+                  href={getWhatsAppLink(selectedOrder.customerPhone, `Olá, ${selectedOrder.customerName}! Seu pedido #${selectedOrder.code} está pronto.`)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex w-full items-center justify-center gap-2 rounded-md bg-green-500/10 py-2 text-green-500 hover:bg-green-500/20"
