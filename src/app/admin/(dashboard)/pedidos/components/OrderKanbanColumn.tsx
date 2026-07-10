@@ -29,6 +29,7 @@ interface OrderKanbanColumnProps {
 
 export function OrderKanbanColumn({
   title,
+  status,
   orders,
   nextStatus,
   nextLabel,
@@ -49,12 +50,15 @@ export function OrderKanbanColumn({
     startTransition(() => { deleteOrderAction(orderId); });
   };
 
-  // Função auxiliar para gerar o link do WhatsApp corrigido
-  const getWhatsAppLink = (phone: string, message: string) => {
-    // Remove tudo que não é número
-    const cleanPhone = phone.replace(/\D/g, "");
-    // Se não começar com 55, adiciona. Se já tiver 55, mantém.
+  const getWhatsAppLink = (order: KanbanOrder) => {
+    const cleanPhone = order.customerPhone!.replace(/\D/g, "");
     const finalPhone = cleanPhone.startsWith("55") ? cleanPhone : `55${cleanPhone}`;
+    
+    // LÓGICA INTELIGENTE: Muda a mensagem baseada no status da coluna
+    const message = status === OrderStatus.OUT_FOR_DELIVERY 
+      ? `Olá, ${order.customerName}! Seu pedido #${order.code} saiu para entrega e está a caminho! 🛵`
+      : `Olá, ${order.customerName}! Seu pedido #${order.code} está pronto! 🍔`;
+
     return `https://wa.me/${finalPhone}?text=${encodeURIComponent(message)}`;
   };
 
@@ -107,7 +111,7 @@ export function OrderKanbanColumn({
                 
                 {order.customerPhone && (
                   <a
-                    href={getWhatsAppLink(order.customerPhone, `Olá, ${order.customerName}! Seu pedido #${order.code} está pronto.`)}
+                    href={getWhatsAppLink(order)}
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={(e) => e.stopPropagation()}
@@ -145,7 +149,7 @@ export function OrderKanbanColumn({
               
               {selectedOrder.customerPhone && (
                 <a
-                  href={getWhatsAppLink(selectedOrder.customerPhone, `Olá, ${selectedOrder.customerName}! Seu pedido #${selectedOrder.code} está pronto.`)}
+                  href={getWhatsAppLink(selectedOrder)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex w-full items-center justify-center gap-2 rounded-md bg-green-500/10 py-2 text-green-500 hover:bg-green-500/20"
