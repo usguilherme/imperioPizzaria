@@ -7,10 +7,7 @@ import { useCartStore } from "@/store/cart.store";
 import { formatCurrency } from "@/lib/utils";
 
 export default function CartPage() {
-  // Puxamos a função getTotalPrice da nossa store inteligente!
   const { items, removeItem, updateQuantity, clearCart, getTotalPrice } = useCartStore();
-
-  // Agora o subtotal usa a lógica mestre, sem falhas!
   const subtotal = getTotalPrice();
 
   if (items.length === 0) {
@@ -44,85 +41,45 @@ export default function CartPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-        {/* Lista de Itens */}
         <div className="lg:col-span-2 space-y-4">
           {items.map((item) => {
-            // Calculamos o preço TOTAL deste item (Preço Base + Adicionais)
             const addonsTotal = item.selectedAddons?.reduce((acc, addon) => acc + Number(addon.price), 0) || 0;
             const itemTotalUnitPrice = Number(item.price) + addonsTotal;
             
             return (
               <div key={item.id} className="flex flex-col sm:flex-row gap-4 rounded-2xl border border-border bg-background-surface p-4 shadow-sm">
-                
-                {/* Imagem */}
                 {item.imageUrl && (
                   <div className="relative h-24 w-24 flex-shrink-0 overflow-hidden rounded-xl">
                     <Image src={item.imageUrl} alt={item.name} fill className="object-cover" />
                   </div>
                 )}
-
-                {/* Informações do Produto */}
                 <div className="flex flex-1 flex-col justify-between">
                   <div>
                     <h3 className="font-bold text-foreground text-lg">{item.name}</h3>
-                    
-                    {/* Renderização condicional de PIZZA (Sabores) */}
                     {item.flavors && item.flavors.length > 0 && (
-                      <p className="text-sm text-foreground-muted mt-1">
-                        Sabores: {item.flavors.map(f => f.name).join(" e ")}
-                      </p>
+                      <p className="text-sm text-foreground-muted mt-1">Sabores: {item.flavors.map(f => f.name).join(" e ")}</p>
                     )}
-
-                    {/* Borda da Pizza (se houver) com o 'as any' para calar o TypeScript */}
-                    {(item as any).crustId && (item as any).crustName && (
-                      <p className="text-sm text-foreground-muted mt-1">
-                        Borda: {(item as any).crustName}
-                      </p>
+                    {(item as any).crustName && (
+                      <p className="text-sm text-foreground-muted mt-1">Borda: {(item as any).crustName}</p>
                     )}
-
-                    {/* Renderização condicional de ADICIONAIS */}
                     {item.selectedAddons && item.selectedAddons.length > 0 && (
                       <div className="mt-1 text-sm text-foreground-muted">
                         <span className="font-medium">Adicionais: </span>
                         {item.selectedAddons.map((addon, index) => (
-                          <span key={index}>
-                            {addon.name} (+{formatCurrency(addon.price)}){index < item.selectedAddons!.length - 1 ? ', ' : ''}
-                          </span>
+                          <span key={index}>{addon.name} (+{formatCurrency(addon.price)}){index < item.selectedAddons!.length - 1 ? ', ' : ''}</span>
                         ))}
                       </div>
                     )}
                   </div>
-
-                  {/* Preço e Controles */}
                   <div className="mt-4 flex items-center justify-between">
-                    {/* Aqui exibimos o valor real da unidade, considerando os adicionais */}
-                    <span className="font-bold text-primary text-lg">
-                      {formatCurrency(itemTotalUnitPrice)}
-                    </span>
-
+                    <span className="font-bold text-primary text-lg">{formatCurrency(itemTotalUnitPrice)}</span>
                     <div className="flex items-center gap-4">
                       <div className="flex items-center rounded-lg border border-border bg-background-elevated">
-                        <button
-                          onClick={() => updateQuantity(item.id, Math.max(1, item.quantity - 1))}
-                          className="p-2 text-foreground-muted hover:text-foreground"
-                        >
-                          <Minus size={16} />
-                        </button>
+                        <button onClick={() => updateQuantity(item.id, Math.max(1, item.quantity - 1))} className="p-2 text-foreground-muted hover:text-foreground"><Minus size={16} /></button>
                         <span className="w-8 text-center text-sm font-medium">{item.quantity}</span>
-                        <button
-                          onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                          className="p-2 text-foreground-muted hover:text-foreground"
-                        >
-                          <Plus size={16} />
-                        </button>
+                        <button onClick={() => updateQuantity(item.id, item.quantity + 1)} className="p-2 text-foreground-muted hover:text-foreground"><Plus size={16} /></button>
                       </div>
-
-                      <button
-                        onClick={() => removeItem(item.id)}
-                        className="rounded-lg p-2 text-red-500 hover:bg-red-50 transition-colors"
-                      >
-                        <Trash2 size={20} />
-                      </button>
+                      <button onClick={() => removeItem(item.id)} className="rounded-lg p-2 text-red-500 hover:bg-red-50 transition-colors"><Trash2 size={20} /></button>
                     </div>
                   </div>
                 </div>
@@ -131,25 +88,15 @@ export default function CartPage() {
           })}
         </div>
 
-        {/* Resumo do Pedido */}
         <div className="lg:col-span-1">
           <div className="sticky top-6 rounded-2xl border border-border bg-background-surface p-6 shadow-sm">
             <h2 className="mb-6 font-display text-lg font-bold text-foreground">Resumo</h2>
-            
             <div className="space-y-4 mb-6 text-sm">
-              <div className="flex justify-between text-foreground-muted">
-                <span>Subtotal</span>
-                {/* Usando o nosso subtotal inteligente calculado pela Store */}
-                <span>{formatCurrency(subtotal)}</span>
-              </div>
-              <div className="flex justify-between text-foreground-muted">
-                <span>Taxa de Entrega</span>
-                <span>A calcular</span>
-              </div>
+              <div className="flex justify-between text-foreground-muted"><span>Subtotal</span><span>{formatCurrency(subtotal)}</span></div>
+              <div className="flex justify-between text-foreground-muted"><span>Taxa de Entrega</span><span>A calcular</span></div>
               <div className="h-px w-full bg-border" />
               <div className="flex justify-between text-lg font-bold text-foreground">
                 <span>Total Estimado</span>
-                {/* Replicando o valor inteligente aqui também */}
                 <span className="text-primary">{formatCurrency(subtotal)}</span>
               </div>
             </div>
