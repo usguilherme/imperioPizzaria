@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Search, User, ShoppingCart, Crown } from "lucide-react";
+import { User, ShoppingCart, Crown } from "lucide-react";
 import { useCartStore } from "@/store/cart.store";
 import { useEffect, useState } from "react";
 
@@ -29,18 +29,8 @@ export function Header() {
           </div>
         </Link>
 
-        {/* Busca */}
-        <div className="relative hidden flex-1 max-w-md md:block">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-foreground-subtle" size={18} />
-          <input
-            type="search"
-            placeholder="Buscar pizza, burger, combo..."
-            className="w-full rounded-full border border-border bg-background-surface py-2 pl-10 pr-4 text-sm text-foreground placeholder:text-foreground-subtle focus:border-primary focus:outline-none"
-          />
-        </div>
-
-        {/* Categorias */}
-        <nav className="hidden lg:flex items-center gap-4 overflow-x-auto max-w-[500px] scroll-smooth [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [mask-image:linear-gradient(to_right,transparent,black_15%,black_85%,transparent)]">
+        {/* Categorias (Ocupam o espaço agora que a busca saiu) */}
+        <nav className="hidden lg:flex items-center gap-4 overflow-x-auto max-w-[600px] scroll-smooth [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [mask-image:linear-gradient(to_right,transparent,black_5%,black_95%,transparent)]">
           {categories.map((cat) => (
             <Link
               key={cat.slug}
