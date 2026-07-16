@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CheckCircle2, Circle, XCircle } from "lucide-react";
 
 type OrderStatus =
@@ -28,8 +28,35 @@ const STEPS: { status: OrderStatus; label: string }[] = [
 
 const POLL_INTERVAL_MS = 15000; // 15 segundos — página de cliente, pode ser mais ágil que o admin
 
+// Toca um som curto e vibra o aparelho (se suportado) para avisar o cliente
+// que o status do pedido mudou, sem precisar ele ficar olhando a tela.
+function notifyStatusChange() {
+  try {
+    // Vibração: funciona em Android/Chrome. iOS Safari não suporta navigator.vibrate,
+    // então falha silenciosamente lá (o som ainda toca normalmente).
+    if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+      navigator.vibrate(200);
+    }
+  } catch {
+    // ignora — vibração é só um extra, não pode quebrar a página
+  }
+
+  try {
+    // Coloque um arquivo de som curto (ex: notification.mp3) em /public
+    const audio = new Audio("/notification.mp3");
+    audio.volume = 0.6;
+    audio.play().catch(() => {
+      // navegador pode bloquear autoplay de áudio sem interação do usuário;
+      // nesse caso a vibração acima ainda cumpre o papel de avisar
+    });
+  } catch {
+    // ignora — som é só um extra, não pode quebrar a página
+  }
+}
+
 export function OrderStatusTracker({ code, initialStatus }: OrderStatusTrackerProps) {
   const [status, setStatus] = useState<OrderStatus>(initialStatus);
+  const previousStatusRef = useRef<OrderStatus>(initialStatus);
 
   useEffect(() => {
     // Se já foi entregue ou cancelado, não precisa mais ficar consultando
@@ -40,6 +67,13 @@ export function OrderStatusTracker({ code, initialStatus }: OrderStatusTrackerPr
         const res = await fetch(`/api/orders/track/${code}`, { cache: "no-store" });
         if (!res.ok) return;
         const data = await res.json();
+
+        // Só notifica se o status realmente mudou desde a última checagem
+        if (data.status !== previousStatusRef.current) {
+          notifyStatusChange();
+          previousStatusRef.current = data.status;
+        }
+
         setStatus(data.status);
       } catch {
         // falha de rede silenciosa, tenta de novo no próximo ciclo
