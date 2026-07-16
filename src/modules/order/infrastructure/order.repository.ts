@@ -16,8 +16,8 @@ interface ResolvedPizzaSelection {
 interface OrderItemInput {
   productId: string;
   quantity: number;
-  unitPrice: number; // preço unitário base (tamanho OU preço fixo do produto)
-  totalPrice: number; // (unitPrice + adicionais + borda) * quantity
+  unitPrice: number;
+  totalPrice: number;
   observation?: string | null;
   addons?: ResolvedAddon[];
   pizza?: ResolvedPizzaSelection | null;
@@ -131,6 +131,34 @@ export class OrderRepository {
     });
   }
 
+  // 🆕 Busca o pedido pelo código público (usado na página de rastreamento
+  // do cliente, ex: imperio-pizzaria.vercel.app/pedido/ABC123)
+  async findByCode(code: string) {
+    return prisma.order.findUnique({
+      where: { code },
+      include: {
+        items: {
+          include: {
+            product: true,
+            addons: true,
+            pizzaCombination: {
+              include: { size: true, crust: true, flavorOne: true, flavorTwo: true },
+            },
+          },
+        },
+      },
+    });
+  }
+
+  // 🆕 Versão "leve" só com o status, usada pelo polling da página de
+  // rastreamento (evita buscar todos os itens a cada 15s desnecessariamente)
+  async findStatusByCode(code: string) {
+    return prisma.order.findUnique({
+      where: { code },
+      select: { status: true, updatedAt: true },
+    });
+  }
+
   async updateStatus(id: string, status: OrderStatus) {
     return prisma.order.update({ where: { id }, data: { status } });
   }
@@ -139,18 +167,15 @@ export class OrderRepository {
     return prisma.order.update({ where: { id }, data: { isPrinted: true } });
   }
 
-  // Método adicionado para resolver o erro de build
   async delete(id: string) {
     return prisma.$transaction(async (tx) => {
-      // 1. Encontra todos os itens para deletar sub-tabelas (addons e pizzas)
       const items = await tx.orderItem.findMany({ where: { orderId: id } });
-      
+
       for (const item of items) {
         await tx.orderItemAddon.deleteMany({ where: { orderItemId: item.id } });
         await tx.pizzaFlavorCombination.deleteMany({ where: { orderItemId: item.id } });
       }
 
-      // 2. Deleta os itens e o pedido
       await tx.orderItem.deleteMany({ where: { orderId: id } });
       return await tx.order.delete({ where: { id } });
     });

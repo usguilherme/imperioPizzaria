@@ -13,6 +13,19 @@ interface Product {
   addons: { name: string; price: number }[];
 }
 
+// Gera um ID único mesmo em contextos não seguros (ex: acesso via IP local, sem HTTPS),
+// onde crypto.randomUUID() não está disponível.
+function generateId(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
 export function ProductDetails({ product }: { product: Product }) {
   const [selectedAddons, setSelectedAddons] = useState<{name: string, price: number}[]>([]);
   
@@ -33,7 +46,7 @@ export function ProductDetails({ product }: { product: Product }) {
   const handleAddToCart = () => {
     // Montando o objeto exatamente como a sua interface CartItem exige
     addItem({
-      id: crypto.randomUUID(), // Gera um ID único para este item no carrinho
+      id: generateId(), // Gera um ID único para este item no carrinho
       productId: product.id,
       name: product.title,
       price: Number(product.originalPrice), // Envia o preço base, o store calcula o resto

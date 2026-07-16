@@ -4,6 +4,7 @@ import Link from "next/link";
 import { User, ShoppingCart, Crown } from "lucide-react";
 import { useCartStore } from "@/store/cart.store";
 import { useEffect, useState } from "react";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export function Header() {
   const itemsCount = useCartStore((state) => state.getTotalItems());
@@ -29,7 +30,7 @@ export function Header() {
           </div>
         </Link>
 
-        {/* Categorias (Ocupam o espaço agora que a busca saiu) */}
+        {/* Categorias */}
         <nav className="hidden lg:flex items-center gap-4 overflow-x-auto max-w-[600px] scroll-smooth [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [mask-image:linear-gradient(to_right,transparent,black_5%,black_95%,transparent)]">
           {categories.map((cat) => (
             <Link
@@ -44,6 +45,9 @@ export function Header() {
 
         {/* Ações */}
         <div className="ml-auto flex items-center gap-3">
+          {/* 🆕 Botão de alternar tema claro/escuro */}
+          <ThemeToggle />
+
           <Link href="/admin/login" className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm text-foreground-muted transition-colors hover:text-foreground">
             <User size={18} />
             <div className="hidden sm:inline">Entrar</div>

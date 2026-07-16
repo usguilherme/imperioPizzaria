@@ -10,27 +10,27 @@ const config: Config = {
     extend: {
       colors: {
         background: {
-          DEFAULT: "#0D0D0D",
-          surface: "#1A1A1A",
-          elevated: "#242424",
+          DEFAULT: "rgb(var(--color-background) / <alpha-value>)",
+          surface: "rgb(var(--color-background-surface) / <alpha-value>)",
+          elevated: "rgb(var(--color-background-elevated) / <alpha-value>)",
         },
         primary: {
-          DEFAULT: "#E8291C",
-          hover: "#C71F14",
-          light: "#FF4438",
+          DEFAULT: "rgb(var(--color-primary) / <alpha-value>)",
+          hover: "rgb(var(--color-primary-hover) / <alpha-value>)",
+          light: "rgb(var(--color-primary-light) / <alpha-value>)",
         },
         accent: {
-          DEFAULT: "#FF7A1A",
-          hover: "#E86A0F",
+          DEFAULT: "rgb(var(--color-accent) / <alpha-value>)",
+          hover: "rgb(var(--color-accent-hover) / <alpha-value>)",
         },
         foreground: {
-          DEFAULT: "#FFFFFF",
-          muted: "#A3A3A3",
-          subtle: "#6B6B6B",
+          DEFAULT: "rgb(var(--color-foreground) / <alpha-value>)",
+          muted: "rgb(var(--color-foreground-muted) / <alpha-value>)",
+          subtle: "rgb(var(--color-foreground-subtle) / <alpha-value>)",
         },
-        success: "#22C55E",
+        success: "rgb(var(--color-success) / <alpha-value>)",
         border: {
-          DEFAULT: "#2A2A2A",
+          DEFAULT: "rgb(var(--color-border) / <alpha-value>)",
         },
       },
       fontFamily: {

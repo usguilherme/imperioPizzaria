@@ -2,9 +2,57 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ==========================================
+   TEMA CLARO (padrão, quando .dark NÃO está presente no <html>)
+   ========================================== */
+:root {
+  --color-background: 255 255 255;
+  --color-background-surface: 245 245 245;
+  --color-background-elevated: 235 235 235;
+
+  --color-foreground: 23 23 23;
+  --color-foreground-muted: 82 82 82;
+  --color-foreground-subtle: 140 140 140;
+
+  --color-border: 224 224 224;
+
+  --color-primary: 232 41 28;
+  --color-primary-hover: 199 31 20;
+  --color-primary-light: 255 68 56;
+
+  --color-accent: 255 122 26;
+  --color-accent-hover: 232 106 15;
+
+  --color-success: 34 197 94;
+}
+
+/* ==========================================
+   TEMA ESCURO (quando .dark está presente no <html>)
+   ========================================== */
+.dark {
+  --color-background: 13 13 13;
+  --color-background-surface: 26 26 26;
+  --color-background-elevated: 36 36 36;
+
+  --color-foreground: 255 255 255;
+  --color-foreground-muted: 163 163 163;
+  --color-foreground-subtle: 107 107 107;
+
+  --color-border: 42 42 42;
+
+  --color-primary: 232 41 28;
+  --color-primary-hover: 199 31 20;
+  --color-primary-light: 255 68 56;
+
+  --color-accent: 255 122 26;
+  --color-accent-hover: 232 106 15;
+
+  --color-success: 34 197 94;
+}
+
 @layer base {
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground transition-colors duration-200;
   }
 }
 

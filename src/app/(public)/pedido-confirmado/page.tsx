@@ -20,9 +20,22 @@ export default function OrderConfirmedPage({
       <p className="mb-6 text-sm text-foreground-subtle">
         Acompanhe o preparo, em breve seu pedido sairá para entrega.
       </p>
-      <Link href="/" className="text-primary hover:underline">
-        Voltar ao cardápio
-      </Link>
+
+      {/* 🆕 Botão de rastreamento, só aparece se tivermos o código do pedido */}
+      {searchParams.code && (
+        <Link
+          href={`/pedido/${searchParams.code}`}
+          className="mb-4 inline-block w-full rounded-xl bg-primary py-3 px-6 font-bold text-white transition-transform hover:scale-[1.02] active:scale-95"
+        >
+          Acompanhar meu pedido
+        </Link>
+      )}
+
+      <div>
+        <Link href="/" className="text-primary hover:underline">
+          Voltar ao cardápio
+        </Link>
+      </div>
     </div>
   );
 }

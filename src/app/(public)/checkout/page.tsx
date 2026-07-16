@@ -135,10 +135,10 @@ export default function CheckoutPage() {
         message += `\n*Observações:* ${form.notes}`;
       }
 
-      // CORREÇÃO: Detecta se é computador para forçar o WhatsApp Web
+      // Detecta se é computador para forçar o WhatsApp Web
       const isDesktopUser = !(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
-      
-      const whatsappUrl = isDesktopUser 
+
+      const whatsappUrl = isDesktopUser
         ? `https://web.whatsapp.com/send?phone=5583988738301&text=${encodeURIComponent(message)}`
         : `https://api.whatsapp.com/send?phone=5583988738301&text=${encodeURIComponent(message)}`;
 
@@ -167,6 +167,7 @@ export default function CheckoutPage() {
           <p className="font-semibold text-lg">
             Pedido salvo com sucesso! Agora finalize enviando no WhatsApp:
           </p>
+
           <a
             href={iosWhatsappUrl}
             target="_blank"
@@ -179,6 +180,17 @@ export default function CheckoutPage() {
           >
             ENVIAR PEDIDO NO WHATSAPP
           </a>
+
+          {orderCode && (
+            <div className="pt-2">
+              <a
+                href={`/pedido/${orderCode}`}
+                className="inline-block text-sm font-medium text-white/90 underline underline-offset-2 hover:text-white"
+              >
+                Acompanhar meu pedido →
+              </a>
+            </div>
+          )}
         </div>
       ) : (
         <>
