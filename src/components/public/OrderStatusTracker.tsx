@@ -26,14 +26,18 @@ const STEPS: { status: OrderStatus; label: string }[] = [
   { status: "DELIVERED", label: "Entregue" },
 ];
 
-const POLL_INTERVAL_MS = 15000; // 15 segundos — página de cliente, pode ser mais ágil que o admin
+// Intervalo entre consultas. 1min30s ainda parece "automático" pro cliente,
+// mas gera bem menos consultas comparado a 15s — reduz bastante o consumo do banco.
+const POLL_INTERVAL_MS = 90000;
+
+// Depois desse tempo com a aba aberta, para de consultar automaticamente
+// (evita gastar banco à toa se o cliente esquecer a aba aberta o dia todo).
+const MAX_POLLING_DURATION_MS = 30 * 60 * 1000; // 30 minutos
 
 // Toca um som curto e vibra o aparelho (se suportado) para avisar o cliente
 // que o status do pedido mudou, sem precisar ele ficar olhando a tela.
 function notifyStatusChange() {
   try {
-    // Vibração: funciona em Android/Chrome. iOS Safari não suporta navigator.vibrate,
-    // então falha silenciosamente lá (o som ainda toca normalmente).
     if (typeof navigator !== "undefined" && "vibrate" in navigator) {
       navigator.vibrate(200);
     }
@@ -42,12 +46,10 @@ function notifyStatusChange() {
   }
 
   try {
-    // Coloque um arquivo de som curto (ex: notification.mp3) em /public
     const audio = new Audio("/notification.mp3");
     audio.volume = 0.6;
     audio.play().catch(() => {
-      // navegador pode bloquear autoplay de áudio sem interação do usuário;
-      // nesse caso a vibração acima ainda cumpre o papel de avisar
+      // navegador pode bloquear autoplay sem interação do usuário
     });
   } catch {
     // ignora — som é só um extra, não pode quebrar a página
@@ -57,18 +59,32 @@ function notifyStatusChange() {
 export function OrderStatusTracker({ code, initialStatus }: OrderStatusTrackerProps) {
   const [status, setStatus] = useState<OrderStatus>(initialStatus);
   const previousStatusRef = useRef<OrderStatus>(initialStatus);
+  const startTimeRef = useRef<number>(Date.now());
+  const [stoppedByTimeout, setStoppedByTimeout] = useState(false);
 
   useEffect(() => {
-    // Se já foi entregue ou cancelado, não precisa mais ficar consultando
-    if (status === "DELIVERED" || status === "CANCELED") return;
+    // Se já foi entregue, cancelado, ou já passou do tempo máximo, não consulta mais
+    if (status === "DELIVERED" || status === "CANCELED" || stoppedByTimeout) return;
 
-    const interval = setInterval(async () => {
+    let interval: ReturnType<typeof setInterval> | null = null;
+
+    async function fetchStatus() {
+      // Se a aba não está visível (usuário trocou de aba/minimizou), pula essa consulta.
+      // Isso sozinho já corta boa parte do consumo, já que muita gente deixa a aba
+      // aberta em segundo plano depois de conferir o pedido.
+      if (typeof document !== "undefined" && document.hidden) return;
+
+      // Corta o polling depois do tempo máximo, mesmo que a aba continue aberta
+      if (Date.now() - startTimeRef.current > MAX_POLLING_DURATION_MS) {
+        setStoppedByTimeout(true);
+        return;
+      }
+
       try {
         const res = await fetch(`/api/orders/track/${code}`, { cache: "no-store" });
         if (!res.ok) return;
         const data = await res.json();
 
-        // Só notifica se o status realmente mudou desde a última checagem
         if (data.status !== previousStatusRef.current) {
           notifyStatusChange();
           previousStatusRef.current = data.status;
@@ -78,10 +94,23 @@ export function OrderStatusTracker({ code, initialStatus }: OrderStatusTrackerPr
       } catch {
         // falha de rede silenciosa, tenta de novo no próximo ciclo
       }
-    }, POLL_INTERVAL_MS);
+    }
 
-    return () => clearInterval(interval);
-  }, [code, status]);
+    interval = setInterval(fetchStatus, POLL_INTERVAL_MS);
+
+    // Quando a aba volta a ficar visível, consulta na hora em vez de esperar
+    // o próximo ciclo — assim o cliente vê o status atualizado imediatamente
+    // ao voltar pra aba, sem precisar aumentar a frequência do polling em si.
+    function handleVisibilityChange() {
+      if (!document.hidden) fetchStatus();
+    }
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      if (interval) clearInterval(interval);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [code, status, stoppedByTimeout]);
 
   if (status === "CANCELED") {
     return (
@@ -137,9 +166,15 @@ export function OrderStatusTracker({ code, initialStatus }: OrderStatusTrackerPr
         })}
       </div>
 
-      {currentIndex >= 0 && currentIndex < STEPS.length - 1 && (
+      {currentIndex >= 0 && currentIndex < STEPS.length - 1 && !stoppedByTimeout && (
         <p className="mt-6 text-center text-sm text-foreground-muted">
           Atualizamos essa página automaticamente — não precisa recarregar.
+        </p>
+      )}
+
+      {stoppedByTimeout && (
+        <p className="mt-6 text-center text-sm text-foreground-muted">
+          Recarregue a página para ver a atualização mais recente do seu pedido.
         </p>
       )}
     </div>
