@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/modules/auth/infrastructure/auth.config";
 import { Sidebar } from "@/components/admin/Sidebar";
+import { AutoRefresher } from "@/components/AutoRefresher";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions);
@@ -12,6 +13,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   return (
     <div className="flex min-h-screen bg-background">
+      {/* 🆕 Atualiza os dados do admin automaticamente a cada 1 minuto */}
+      <AutoRefresher />
       <Sidebar userName={session.user.name ?? "Administrador"} role={session.user.role} />
       <main className="flex-1 overflow-y-auto p-6">{children}</main>
     </div>
