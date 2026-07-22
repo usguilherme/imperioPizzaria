@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { createProductAction, updateProductAction } from "@/actions/product.actions";
+import { uploadProductImageAction } from "@/actions/upload.actions";
 import { Button } from "@/components/ui/Button";
 import { ProductSchemaInput } from "@/modules/product/application/validators/product.schema";
 import { Trash2, Plus } from "lucide-react";
@@ -43,15 +44,6 @@ interface ProductFormProps {
 
 const MAX_IMAGE_SIZE_MB = 10;
 
-function fileToBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-
 export function ProductForm({ categories, availableSizes, availableCrusts, initialData }: ProductFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -72,7 +64,6 @@ export function ProductForm({ categories, availableSizes, availableCrusts, initi
     availableSizeIds: initialData?.availableSizes?.map(s => s.id) ?? [],
     availableCrustIds: initialData?.availableCrusts?.map(c => c.id) ?? [],
     addons: (initialData?.addons ?? []) as Addon[],
-    // 🆕 Correção: Força a conversão do Decimal do Prisma para Number nativo no carregamento
     sizePromos: initialData?.sizePromos?.map((p: any) => ({
       sizeId: p.sizeId,
       promoPrice: Number(p.promoPrice) || 0
@@ -104,7 +95,6 @@ export function ProductForm({ categories, availableSizes, availableCrusts, initi
     });
   };
 
-  // CRUD do array de promoções por tamanho
   const addSizePromo = () => {
     setForm((prev) => ({
       ...prev,
@@ -155,9 +145,22 @@ export function ProductForm({ categories, availableSizes, availableCrusts, initi
           maxWidthOrHeight: 1000,
           useWebWorker: true,
         });
-        
-        const base64 = await fileToBase64(compressedFile);
-        setForm((prev) => ({ ...prev, imageUrl: base64 }));
+
+        // 🔧 FIX: em vez de converter pra base64 e guardar no Postgres,
+        // sobe o arquivo pro Vercel Blob e guarda só a URL curta (poucos
+        // bytes) no banco. A imagem em si passa a ser servida pelo CDN
+        // do Blob, sem consumir a banda da Neon nunca mais.
+        const formData = new FormData();
+        formData.append("file", compressedFile, compressedFile.name);
+
+        const result = await uploadProductImageAction(formData);
+
+        if (!result.success || !result.url) {
+          setError(result.error ?? "Não foi possível enviar a imagem");
+          return;
+        }
+
+        setForm((prev) => ({ ...prev, imageUrl: result.url as string }));
       } catch {
         setError("Não foi possível processar essa imagem, tente outro arquivo");
       } finally {
@@ -174,7 +177,6 @@ export function ProductForm({ categories, availableSizes, availableCrusts, initi
       return;
     }
 
-    // Validação simples: não deixa salvar duas promoções pro mesmo tamanho
     const sizeIds = form.sizePromos.map((p) => p.sizeId);
     if (new Set(sizeIds).size !== sizeIds.length) {
       setError("Você tem duas promoções configuradas para o mesmo tamanho. Remova uma delas.");
@@ -196,8 +198,6 @@ export function ProductForm({ categories, availableSizes, availableCrusts, initi
     });
   };
 
-  // Só faz sentido configurar promoção por tamanho se o produto for
-  // um sabor de pizza (isFlavorEligible) E a promoção estiver ativa.
   const showSizePromoSection = form.isFlavorEligible && form.isPromoActive;
 
   return (
@@ -240,8 +240,12 @@ export function ProductForm({ categories, availableSizes, availableCrusts, initi
           type="file"
           accept="image/*"
           onChange={handleImageChange}
-          className="block w-full text-sm text-foreground-muted file:mr-3 file:rounded-lg file:border-0 file:bg-primary file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-primary-hover"
+          disabled={isProcessingImage}
+          className="block w-full text-sm text-foreground-muted file:mr-3 file:rounded-lg file:border-0 file:bg-primary file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-primary-hover disabled:opacity-50"
         />
+        {isProcessingImage && (
+          <p className="mt-2 text-xs text-foreground-muted">Enviando imagem...</p>
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-4">
@@ -393,7 +397,6 @@ export function ProductForm({ categories, availableSizes, availableCrusts, initi
         </label>
       </div>
 
-      {/* SEÇÃO DE PROMOÇÃO POR TAMANHO — só aparece se for sabor de pizza + promoção ativa */}
       {showSizePromoSection && (
         <div className="space-y-2 rounded-lg border border-primary/30 bg-primary/5 p-3">
           <div className="flex items-center justify-between">

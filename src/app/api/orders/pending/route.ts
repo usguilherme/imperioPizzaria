@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma"; 
+import { prisma } from "@/lib/prisma";
 import { OrderStatus } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
@@ -10,25 +10,33 @@ export async function GET() {
       where: {
         status: {
           notIn: [
-            OrderStatus.OUT_FOR_DELIVERY, 
-            OrderStatus.DELIVERED, 
+            OrderStatus.OUT_FOR_DELIVERY,
+            OrderStatus.DELIVERED,
             OrderStatus.CANCELED
           ]
         }
       },
-      // Certifique-se de incluir o campo 'notes' aqui se o Prisma exigir
-      // (Por padrão o prisma já traz todos os campos, mas a formatação abaixo pode estar filtrando)
-      include: { 
+      include: {
         items: {
-          include: { 
-            product: true,
+          include: {
+            // 🔧 FIX: antes era "product: true" (trazia TUDO, incluindo
+            // imageUrl em base64). A Cozinha só usa o título — então
+            // selecionamos só o que é realmente exibido no cupom.
+            product: {
+              select: { id: true, title: true },
+            },
             addons: true,
             pizzaCombination: {
               include: {
                 size: true,
                 crust: true,
-                flavorOne: true,
-                flavorTwo: true
+                // 🔧 FIX: mesma coisa aqui — sabores só precisam do nome.
+                flavorOne: {
+                  select: { id: true, title: true },
+                },
+                flavorTwo: {
+                  select: { id: true, title: true },
+                },
               }
             }
           }
@@ -36,10 +44,9 @@ export async function GET() {
       },
       orderBy: { createdAt: "asc" },
     });
-    
-    // CORREÇÃO: Certifique-se de manter o 'notes' no spread operator (...)
+
     const formattedOrders = pendingOrders.map((order: any) => ({
-      ...order, // Isso garante que 'notes', 'customerName', etc, continuem aqui
+      ...order,
       items: order.items.map((item: any) => {
         const combo = item.pizzaCombination;
         return {
@@ -50,7 +57,7 @@ export async function GET() {
         };
       })
     }));
-    
+
     return NextResponse.json(formattedOrders);
   } catch (error) {
     console.error("Erro ao buscar pedidos:", error);
