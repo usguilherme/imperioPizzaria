@@ -16,64 +16,59 @@ interface Order {
   total: number;
 }
 
-// 🆕 intervalo do polling (8 segundos)
-const POLL_INTERVAL_MS = 8000;
+// 🚀 Aumentamos para 20 segundos para economizar brutalmente o Network Transfer da Vercel
+const POLL_INTERVAL_MS = 20000;
 
 export default function KitchenPage() {
   const [orders, setOrders] = useState<Order[]>([]);
-  // 🆕 guarda os IDs que já apareceram, para saber quais são "novos"
   const [newOrderIds, setNewOrderIds] = useState<Set<string>>(new Set());
-  // 🆕 flag pra saber se o usuário já interagiu com a página (necessário
-  // pro navegador permitir tocar áudio automaticamente)
   const [soundUnlocked, setSoundUnlocked] = useState(false);
+  
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const knownIdsRef = useRef<Set<string>>(new Set());
   const isFirstFetchRef = useRef(true);
 
   const fetchOrders = async () => {
-    const res = await fetch("/api/orders/pending", { cache: "no-store" });
-    const data: Order[] = await res.json();
+    try {
+      const res = await fetch("/api/orders/pending", { cache: "no-store" });
+      if (!res.ok) return;
+      
+      const data: Order[] = await res.json();
 
-    const currentIds = new Set(data.map((o) => o.id));
-    const previousIds = knownIdsRef.current;
+      const currentIds = new Set(data.map((o) => o.id));
+      const previousIds = knownIdsRef.current;
 
-    // 🆕 descobre quais pedidos são novos desde a última busca
-    const freshIds = data
-      .map((o) => o.id)
-      .filter((id) => !previousIds.has(id));
+      const freshIds = data
+        .map((o) => o.id)
+        .filter((id) => !previousIds.has(id));
 
-    // Na primeiríssima busca da página, não considera nada como "novo"
-    // (senão todo pedido pendente já existente tocaria o som ao abrir a página)
-    if (!isFirstFetchRef.current && freshIds.length > 0) {
-      setNewOrderIds(new Set(freshIds));
-      playNotificationSound();
+      if (!isFirstFetchRef.current && freshIds.length > 0) {
+        setNewOrderIds(new Set(freshIds));
+        playNotificationSound();
 
-      // remove o destaque visual depois de 10 segundos
-      setTimeout(() => {
-        setNewOrderIds((prev) => {
-          const updated = new Set(prev);
-          freshIds.forEach((id) => updated.delete(id));
-          return updated;
-        });
-      }, 10000);
+        setTimeout(() => {
+          setNewOrderIds((prev) => {
+            const updated = new Set(prev);
+            freshIds.forEach((id) => updated.delete(id));
+            return updated;
+          });
+        }, 10000);
+      }
+
+      knownIdsRef.current = currentIds;
+      isFirstFetchRef.current = false;
+      setOrders(data);
+    } catch (error) {
+      console.error("Erro ao buscar pedidos:", error);
     }
-
-    knownIdsRef.current = currentIds;
-    isFirstFetchRef.current = false;
-    setOrders(data);
   };
 
   const playNotificationSound = () => {
     if (!soundUnlocked || !audioRef.current) return;
     audioRef.current.currentTime = 0;
-    audioRef.current.play().catch(() => {
-      // navegador pode bloquear mesmo assim; falha silenciosa
-    });
+    audioRef.current.play().catch(() => {});
   };
 
-  // 🆕 Navegadores bloqueiam áudio automático até haver uma interação
-  // do usuário na página (clique, toque, etc). Este listener "libera"
-  // o som na primeira interação, e some depois de usado.
   useEffect(() => {
     const unlock = () => {
       setSoundUnlocked(true);
@@ -88,11 +83,38 @@ export default function KitchenPage() {
     };
   }, []);
 
-  // 🆕 Polling: busca pedidos imediatamente e depois a cada X segundos
+  // 🚀 OTIMIZAÇÃO MAXIMA: Polling Inteligente que PAUSA se a aba estiver minimizada
   useEffect(() => {
-    fetchOrders();
-    const interval = setInterval(fetchOrders, POLL_INTERVAL_MS);
-    return () => clearInterval(interval);
+    fetchOrders(); // Busca inicial
+
+    let interval: NodeJS.Timeout;
+
+    const startPolling = () => {
+      interval = setInterval(fetchOrders, POLL_INTERVAL_MS);
+    };
+
+    const stopPolling = () => {
+      if (interval) clearInterval(interval);
+    };
+
+    startPolling();
+
+    // Se o usuário minimizar o Chrome ou mudar de aba, o polling para de consumir a Vercel
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        stopPolling();
+      } else {
+        fetchOrders(); // Atualiza na mesma hora que ele volta pra tela
+        startPolling();
+      }
+    };
+
+    window.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      stopPolling();
+      window.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
   }, []);
 
   const handlePrint = (order: Order) => {
@@ -106,7 +128,6 @@ export default function KitchenPage() {
 
   return (
     <div className="p-4">
-      {/* 🆕 elemento de áudio, invisível, usado para tocar o alerta */}
       <audio ref={audioRef} src="/sounds/new-order.mp3" preload="auto" />
 
       <Link href="/admin" className="text-sm text-gray-600 hover:text-black mb-4 inline-block">
@@ -115,7 +136,6 @@ export default function KitchenPage() {
 
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Cozinha - Pedidos Pendentes</h1>
-        {/* 🆕 aviso visual caso o som ainda não esteja liberado */}
         {!soundUnlocked && (
           <span className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded px-2 py-1">
             Clique em qualquer lugar da tela para ativar o alerta sonoro
@@ -134,7 +154,6 @@ export default function KitchenPage() {
                 isNew ? "border-primary border-2 ring-2 ring-primary/30 animate-pulse" : ""
               }`}
             >
-              {/* 🆕 selo de "Pedido Novo" */}
               {isNew && (
                 <span className="inline-block mb-2 text-xs font-bold text-white bg-primary px-2 py-1 rounded print:hidden">
                   🔔 NOVO PEDIDO
