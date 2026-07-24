@@ -122,6 +122,17 @@ export function ProductForm({ categories, availableSizes, availableCrusts, initi
     });
   };
 
+  // Função adicionada para selecionar/desmarcar todas as bordas
+  const handleToggleAllCrusts = () => {
+    if (!availableCrusts) return;
+    
+    if (form.availableCrustIds.length === availableCrusts.length) {
+      setForm((prev) => ({ ...prev, availableCrustIds: [] }));
+    } else {
+      setForm((prev) => ({ ...prev, availableCrustIds: availableCrusts.map((c) => c.id) }));
+    }
+  };
+
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (!file) return;
@@ -325,7 +336,19 @@ export function ProductForm({ categories, availableSizes, availableCrusts, initi
       </div>
 
       <div className="space-y-2">
-        <label className="block text-sm font-medium text-foreground-muted">Bordas Disponíveis</label>
+        {/* Aqui foi adicionado o container com o título e o botão de selecionar todas as bordas */}
+        <div className="flex items-center justify-between">
+          <label className="block text-sm font-medium text-foreground-muted">Bordas Disponíveis</label>
+          {availableCrusts && availableCrusts.length > 0 && (
+            <button
+              type="button"
+              onClick={handleToggleAllCrusts}
+              className="text-sm text-primary hover:underline"
+            >
+              {form.availableCrustIds.length === availableCrusts.length ? "Desmarcar todas" : "Selecionar todas"}
+            </button>
+          )}
+        </div>
         <div className="flex flex-wrap gap-4 rounded-lg border border-border p-3">
           {availableCrusts?.map((crust) => (
             <label key={crust.id} className="flex items-center gap-2 text-sm text-foreground">
