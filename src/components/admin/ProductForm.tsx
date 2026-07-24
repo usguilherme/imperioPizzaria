@@ -26,7 +26,6 @@ interface CrustOption {
 
 type Addon = { name: string; price: number };
 
-// Promoção de sabor específica por tamanho
 type SizePromo = { sizeId: string; promoPrice: number };
 
 interface ProductFormProps {
@@ -127,8 +126,17 @@ export function ProductForm({ categories, availableSizes, availableCrusts, initi
       const file = e.target.files?.[0];
       if (!file) return;
 
-      if (!file.type.startsWith("image/")) {
-        setError("Selecione um arquivo de imagem válido (jpg, png, webp...)");
+      // iPhone com "Alta Eficiência" salva fotos em HEIC/HEIF — formato que
+      // Chrome, Firefox e Edge não conseguem abrir via canvas (só o Safari
+      // lê nativamente). Detectamos pelo tipo OU pela extensão, porque
+      // alguns navegadores/SOs relatam o MIME type vazio pra esse formato.
+      const isHeic =
+        file.type === "image/heic" ||
+        file.type === "image/heif" ||
+        /\.(heic|heif)$/i.test(file.name);
+
+      if (!file.type.startsWith("image/") && !isHeic) {
+        setError("Selecione um arquivo de imagem válido (jpg, png, webp, heic...)");
         return;
       }
 
@@ -140,16 +148,35 @@ export function ProductForm({ categories, availableSizes, availableCrusts, initi
       setError(null);
       setIsProcessingImage(true);
       try {
-        const compressedFile = await imageCompression(file, {
+        let workingFile: File = file;
+
+        if (isHeic) {
+          const { default: heic2any } = await import("heic2any");
+          const converted = (await heic2any({
+            blob: file,
+            toType: "image/jpeg",
+            quality: 0.9,
+          })) as Blob | Blob[];
+
+          const convertedBlob = Array.isArray(converted) ? converted[0] : converted;
+
+          if (!convertedBlob) {
+            throw new Error("Falha ao converter imagem HEIC");
+          }
+
+          workingFile = new File(
+            [convertedBlob],
+            file.name.replace(/\.(heic|heif)$/i, ".jpg"),
+            { type: "image/jpeg" }
+          );
+        }
+
+        const compressedFile = await imageCompression(workingFile, {
           maxSizeMB: 0.8,
           maxWidthOrHeight: 1000,
           useWebWorker: true,
         });
 
-        // 🔧 FIX: em vez de converter pra base64 e guardar no Postgres,
-        // sobe o arquivo pro Vercel Blob e guarda só a URL curta (poucos
-        // bytes) no banco. A imagem em si passa a ser servida pelo CDN
-        // do Blob, sem consumir a banda da Neon nunca mais.
         const formData = new FormData();
         formData.append("file", compressedFile, compressedFile.name);
 
@@ -238,7 +265,7 @@ export function ProductForm({ categories, availableSizes, availableCrusts, initi
         )}
         <input
           type="file"
-          accept="image/*"
+          accept="image/*,.heic,.heif"
           onChange={handleImageChange}
           disabled={isProcessingImage}
           className="block w-full text-sm text-foreground-muted file:mr-3 file:rounded-lg file:border-0 file:bg-primary file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-primary-hover disabled:opacity-50"
