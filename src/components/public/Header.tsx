@@ -9,6 +9,8 @@ import {
   Search,
   X,
   ChevronRight,
+  ChevronLeft,
+  LayoutDashboard,
   Pizza,
   Beef,
   CupSoda,
@@ -41,6 +43,9 @@ export function Header() {
   const [lastOrderCode, setLastOrderCode] = useState<string | null>(null);
   const [isCategoryMenuOpen, setIsCategoryMenuOpen] = useState(false);
   const [categorySearch, setCategorySearch] = useState("");
+  // Controla o foco do input manualmente, pra não abrir o teclado
+  // por cima da lista assim que o menu abre no celular.
+  const [searchFocused, setSearchFocused] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -67,9 +72,15 @@ export function Header() {
     cat.name.toLowerCase().includes(categorySearch.trim().toLowerCase())
   );
 
+  const openCategoryMenu = () => {
+    setIsCategoryMenuOpen(true);
+    setSearchFocused(false);
+  };
+
   const closeCategoryMenu = () => {
     setIsCategoryMenuOpen(false);
     setCategorySearch("");
+    setSearchFocused(false);
   };
 
   return (
@@ -102,7 +113,7 @@ export function Header() {
           {/* Botão de busca de categorias (foco mobile, já que a nav acima some abaixo de lg) */}
           <button
             type="button"
-            onClick={() => setIsCategoryMenuOpen(true)}
+            onClick={openCategoryMenu}
             className="flex lg:hidden items-center justify-center h-[38px] w-[38px] rounded-lg border border-border bg-background hover:bg-accent/10 text-foreground-muted hover:text-foreground transition-colors"
             aria-label="Buscar categorias"
           >
@@ -124,8 +135,8 @@ export function Header() {
               <span className="sm:hidden">Pedido</span>
             </Link>
           ) : (
-            <Link 
-              href="/acompanhar" 
+            <Link
+              href="/acompanhar"
               className="flex items-center justify-center h-[38px] px-2.5 sm:px-3 rounded-lg border border-border bg-background hover:bg-accent/10 text-foreground-muted hover:text-foreground transition-colors"
               aria-label="Rastrear Pedido"
             >
@@ -160,33 +171,45 @@ export function Header() {
           className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 backdrop-blur-sm lg:items-center lg:p-4"
           onClick={(e) => { if (e.target === e.currentTarget) closeCategoryMenu(); }}
         >
-          <div className="w-full lg:max-w-lg bg-background-surface rounded-t-3xl lg:rounded-3xl flex flex-col max-h-[85vh] shadow-2xl overflow-hidden">
+          <div className="w-full lg:max-w-lg h-[85vh] lg:h-auto lg:max-h-[85vh] bg-background-surface rounded-t-3xl lg:rounded-3xl flex flex-col shadow-2xl overflow-hidden">
             {/* Alça de arrastar (só decorativa, indica "arraste pra fechar" no celular) */}
-            <div className="flex justify-center pt-3 pb-1 lg:hidden">
+            <div className="flex justify-center pt-3 pb-1 lg:hidden shrink-0">
               <div className="h-1.5 w-12 rounded-full bg-border" />
             </div>
 
-            <div className="px-5 pt-2 pb-4 border-b border-border">
-              <div className="flex items-center justify-between mb-3">
-                <div>
-                  <h2 className="font-display text-xl font-bold text-foreground">Cardápio</h2>
-                  <p className="text-xs text-foreground-muted mt-0.5">O que você tá com vontade de comer hoje?</p>
-                </div>
-                <button
-                  onClick={closeCategoryMenu}
-                  className="p-2 -mr-2 rounded-full text-foreground-muted hover:text-foreground hover:bg-accent/10 transition-colors shrink-0"
-                  aria-label="Fechar"
-                >
-                  <X size={20} />
-                </button>
-              </div>
+            {/* Cabeçalho fixo: voltar pro dashboard + fechar */}
+            <div className="flex items-center justify-between px-4 pt-1 pb-2 shrink-0">
+              <Link
+                href="/"
+                onClick={closeCategoryMenu}
+                className="flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-semibold text-foreground-muted hover:text-foreground hover:bg-accent/10 transition-colors"
+              >
+                <ChevronLeft size={16} />
+                <LayoutDashboard size={14} />
+                <span>Dashboard</span>
+              </Link>
+
+              <button
+                onClick={closeCategoryMenu}
+                className="p-2 rounded-full text-foreground-muted hover:text-foreground hover:bg-accent/10 transition-colors shrink-0"
+                aria-label="Fechar"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="px-5 pt-1 pb-4 border-b border-border shrink-0">
+              <h2 className="font-display text-xl font-bold text-foreground">Cardápio</h2>
+              <p className="text-xs text-foreground-muted mt-0.5 mb-3">
+                O que você tá com vontade de comer hoje?
+              </p>
 
               <div className="relative">
                 <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-foreground-muted" />
                 <input
                   type="text"
-                  autoFocus
                   value={categorySearch}
+                  onFocus={() => setSearchFocused(true)}
                   onChange={(e) => setCategorySearch(e.target.value)}
                   placeholder="Buscar categoria (ex: Pizza, Bebidas...)"
                   className="w-full rounded-xl border border-border bg-background pl-10 pr-9 py-3 text-sm text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-shadow"
@@ -203,7 +226,8 @@ export function Header() {
               </div>
             </div>
 
-            <div className="overflow-y-auto px-4 py-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {/* Lista de categorias: sempre mostra todas, com scroll, cada uma clicável */}
+            <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {filteredCategories.length === 0 ? (
                 <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
                   <Search size={28} className="text-foreground-muted" />
@@ -212,7 +236,7 @@ export function Header() {
                   </p>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-3 pb-2">
                   {filteredCategories.map((cat) => {
                     const Icon = getCategoryIcon(cat.name);
                     return (
@@ -239,7 +263,7 @@ export function Header() {
             </div>
 
             {/* Espaço extra pra não ficar colado na barra de gestos do celular */}
-            <div className="pb-[env(safe-area-inset-bottom)] lg:hidden" />
+            <div className="pb-[env(safe-area-inset-bottom)] lg:hidden shrink-0" />
           </div>
         </div>
       )}
