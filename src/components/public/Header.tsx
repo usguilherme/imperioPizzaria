@@ -1,10 +1,38 @@
 "use client";
 
 import Link from "next/link";
-import { User, ShoppingCart, Crown, ClipboardList, Search, X, ChevronRight } from "lucide-react";
+import {
+  User,
+  ShoppingCart,
+  Crown,
+  ClipboardList,
+  Search,
+  X,
+  ChevronRight,
+  Pizza,
+  Beef,
+  CupSoda,
+  Sandwich,
+  Flame,
+  Cookie,
+  UtensilsCrossed,
+  LucideIcon,
+} from "lucide-react";
 import { useCartStore } from "@/store/cart.store";
 import { useEffect, useState } from "react";
 import { ThemeToggle } from "@/components/ThemeToggle";
+
+/** Escolhe um ícone representativo pra categoria com base no nome (fallback: talher genérico). */
+function getCategoryIcon(name: string): LucideIcon {
+  const n = name.toLowerCase();
+  if (n.includes("pizza")) return Pizza;
+  if (n.includes("hambur") || n.includes("burger")) return Beef;
+  if (n.includes("bebid") || n.includes("suco") || n.includes("refri")) return CupSoda;
+  if (n.includes("baguet")) return Sandwich;
+  if (n.includes("petisc") || n.includes("porç") || n.includes("frit")) return Flame;
+  if (n.includes("pastel") || n.includes("pastéis") || n.includes("doce") || n.includes("sobremesa")) return Cookie;
+  return UtensilsCrossed;
+}
 
 export function Header() {
   const itemsCount = useCartStore((state) => state.getTotalItems());
@@ -129,54 +157,89 @@ export function Header() {
       {/* Menu de categorias (bottom sheet) */}
       {isCategoryMenuOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm lg:items-center"
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 backdrop-blur-sm lg:items-center lg:p-4"
           onClick={(e) => { if (e.target === e.currentTarget) closeCategoryMenu(); }}
         >
-          <div className="w-full lg:max-w-md bg-background-surface rounded-t-2xl lg:rounded-2xl flex flex-col max-h-[75vh]">
-            <div className="p-4 border-b border-border flex items-center justify-between">
-              <h2 className="font-display text-lg font-bold text-foreground">Categorias</h2>
-              <button
-                onClick={closeCategoryMenu}
-                className="p-2 text-foreground-muted hover:text-foreground"
-                aria-label="Fechar"
-              >
-                <X size={20} />
-              </button>
+          <div className="w-full lg:max-w-lg bg-background-surface rounded-t-3xl lg:rounded-3xl flex flex-col max-h-[85vh] shadow-2xl overflow-hidden">
+            {/* Alça de arrastar (só decorativa, indica "arraste pra fechar" no celular) */}
+            <div className="flex justify-center pt-3 pb-1 lg:hidden">
+              <div className="h-1.5 w-12 rounded-full bg-border" />
             </div>
 
-            <div className="p-4 border-b border-border">
+            <div className="px-5 pt-2 pb-4 border-b border-border">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <h2 className="font-display text-xl font-bold text-foreground">Cardápio</h2>
+                  <p className="text-xs text-foreground-muted mt-0.5">O que você tá com vontade de comer hoje?</p>
+                </div>
+                <button
+                  onClick={closeCategoryMenu}
+                  className="p-2 -mr-2 rounded-full text-foreground-muted hover:text-foreground hover:bg-accent/10 transition-colors shrink-0"
+                  aria-label="Fechar"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
               <div className="relative">
-                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-foreground-muted" />
+                <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-foreground-muted" />
                 <input
                   type="text"
                   autoFocus
                   value={categorySearch}
                   onChange={(e) => setCategorySearch(e.target.value)}
-                  placeholder="Buscar categoria..."
-                  className="w-full rounded-lg border border-border bg-background pl-9 pr-3 py-2.5 text-sm text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-1 focus:ring-primary"
+                  placeholder="Buscar categoria (ex: Pizza, Bebidas...)"
+                  className="w-full rounded-xl border border-border bg-background pl-10 pr-9 py-3 text-sm text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-shadow"
                 />
+                {categorySearch && (
+                  <button
+                    onClick={() => setCategorySearch("")}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-foreground-muted hover:text-foreground"
+                    aria-label="Limpar busca"
+                  >
+                    <X size={16} />
+                  </button>
+                )}
               </div>
             </div>
 
-            <div className="overflow-y-auto p-2">
+            <div className="overflow-y-auto px-4 py-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {filteredCategories.length === 0 ? (
-                <p className="text-center text-sm text-foreground-muted py-6">
-                  Nenhuma categoria encontrada.
-                </p>
+                <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
+                  <Search size={28} className="text-foreground-muted" />
+                  <p className="text-sm text-foreground-muted">
+                    Nenhuma categoria encontrada para &quot;{categorySearch}&quot;
+                  </p>
+                </div>
               ) : (
-                filteredCategories.map((cat) => (
-                  <Link
-                    key={cat.slug}
-                    href={`/#${cat.slug}`}
-                    onClick={closeCategoryMenu}
-                    className="flex items-center justify-between px-3 py-3 rounded-xl text-foreground hover:bg-primary/10 hover:text-primary transition-colors"
-                  >
-                    <span className="text-sm font-medium">{cat.name}</span>
-                    <ChevronRight size={16} className="text-foreground-muted" />
-                  </Link>
-                ))
+                <div className="grid grid-cols-2 gap-3">
+                  {filteredCategories.map((cat) => {
+                    const Icon = getCategoryIcon(cat.name);
+                    return (
+                      <Link
+                        key={cat.slug}
+                        href={`/#${cat.slug}`}
+                        onClick={closeCategoryMenu}
+                        className="group flex flex-col gap-2.5 rounded-2xl border border-border bg-background p-4 text-left transition-all hover:border-primary/40 hover:bg-primary/5 active:scale-[0.97]"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                            <Icon size={20} />
+                          </span>
+                          <ChevronRight size={16} className="text-foreground-muted transition-transform group-hover:translate-x-0.5 group-hover:text-primary" />
+                        </div>
+                        <span className="text-sm font-semibold text-foreground leading-tight">
+                          {cat.name}
+                        </span>
+                      </Link>
+                    );
+                  })}
+                </div>
               )}
             </div>
+
+            {/* Espaço extra pra não ficar colado na barra de gestos do celular */}
+            <div className="pb-[env(safe-area-inset-bottom)] lg:hidden" />
           </div>
         </div>
       )}
