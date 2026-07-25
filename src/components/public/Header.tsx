@@ -43,9 +43,6 @@ export function Header() {
   const [lastOrderCode, setLastOrderCode] = useState<string | null>(null);
   const [isCategoryMenuOpen, setIsCategoryMenuOpen] = useState(false);
   const [categorySearch, setCategorySearch] = useState("");
-  // Controla o foco do input manualmente, pra não abrir o teclado
-  // por cima da lista assim que o menu abre no celular.
-  const [searchFocused, setSearchFocused] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -72,15 +69,11 @@ export function Header() {
     cat.name.toLowerCase().includes(categorySearch.trim().toLowerCase())
   );
 
-  const openCategoryMenu = () => {
-    setIsCategoryMenuOpen(true);
-    setSearchFocused(false);
-  };
+  const openCategoryMenu = () => setIsCategoryMenuOpen(true);
 
   const closeCategoryMenu = () => {
     setIsCategoryMenuOpen(false);
     setCategorySearch("");
-    setSearchFocused(false);
   };
 
   return (
@@ -110,7 +103,7 @@ export function Header() {
         {/* Ações / Botões Direitos */}
         <div className="ml-auto flex items-center gap-2 sm:gap-3">
 
-          {/* Botão de busca de categorias (foco mobile, já que a nav acima some abaixo de lg) */}
+          {/* 🆕 Botão de busca de categorias (foco mobile, já que a nav acima some abaixo de lg) */}
           <button
             type="button"
             onClick={openCategoryMenu}
@@ -165,7 +158,7 @@ export function Header() {
         </div>
       </div>
 
-      {/* Menu de categorias (bottom sheet) */}
+      {/* 🆕 Menu de categorias (bottom sheet) */}
       {isCategoryMenuOpen && (
         <div
           className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 backdrop-blur-sm lg:items-center lg:p-4"
@@ -209,7 +202,6 @@ export function Header() {
                 <input
                   type="text"
                   value={categorySearch}
-                  onFocus={() => setSearchFocused(true)}
                   onChange={(e) => setCategorySearch(e.target.value)}
                   placeholder="Buscar categoria (ex: Pizza, Bebidas...)"
                   className="w-full rounded-xl border border-border bg-background pl-10 pr-9 py-3 text-sm text-foreground placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-shadow"
