@@ -57,7 +57,14 @@ export function PizzaBuilderModal({
   const isPizza = product.isPizza ?? false;
   const crusts = product.availableCrusts ?? [];
 
-  const filteredCrusts = crusts.filter(c => c.sizeId === selectedSize?.id);
+  // GAMBIARRA: o tamanho "GrandePrime" não tem bordas próprias cadastradas no banco.
+  // Enquanto isso não for corrigido no banco de dados, quando o cliente escolher
+  // "GrandePrime" a gente reaproveita as bordas que já existem pro tamanho Grande
+  // (identificadas pelo nome terminando em " G", ex: "Catupiry G").
+  const isGrandePrime = selectedSize?.name?.trim().toLowerCase() === "grandeprime";
+  const filteredCrusts = isGrandePrime
+    ? crusts.filter(c => c.name.trim().toLowerCase().endsWith(" g"))
+    : crusts.filter(c => c.sizeId === selectedSize?.id);
 
   const getPromoForFlavor = (flavorId: string, sizeId: string) => {
     const flavor = availableFlavors.find((f) => f.id === flavorId);
