@@ -77,6 +77,7 @@ export function Header() {
   };
 
   return (
+    <>
     <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur">
       <div className="mx-auto flex max-w-7xl items-center gap-2 sm:gap-6 px-3 py-3">
         {/* Logo */}
@@ -157,8 +158,11 @@ export function Header() {
           </Link>
         </div>
       </div>
+    </header>
 
-      {/* 🆕 Menu de categorias (bottom sheet) */}
+      {/* 🆕 Menu de categorias (bottom sheet) — fica FORA do header de propósito:
+          o header tem backdrop-blur, e no Safari/iOS isso quebra o position:fixed
+          dos elementos filhos, prendendo o menu dentro da caixinha do header. */}
       {isCategoryMenuOpen && (
         <div
           className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 backdrop-blur-sm lg:items-center lg:p-4"
@@ -259,6 +263,6 @@ export function Header() {
           </div>
         </div>
       )}
-    </header>
+    </>
   );
 }
