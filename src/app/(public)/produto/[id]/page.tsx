@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { ProductDetails } from "@/components/ProductDetails"; // Ajuste este caminho se o seu ProductDetails estiver em outra pasta, ex: "@/components/public/ProductDetails"
+import { ProductDetails } from "@/components/ProductDetails";
 import Image from "next/image";
 import { formatCurrency } from "@/lib/utils";
 
@@ -23,6 +23,20 @@ export default async function ProductPage({ params }: ProductPageProps) {
     ? Number(product.promoPrice) 
     : Number(product.originalPrice);
 
+  // NOVO: Se for pizza, busca os outros sabores para o cliente escolher a outra metade!
+  let availableFlavors: { id: string; name: string }[] = [];
+  if (product.type === "PIZZA" && product.isFlavorEligible) {
+    const extraFlavorsQuery = await prisma.product.findMany({
+      where: {
+        type: "PIZZA",
+        isFlavorEligible: true,
+        id: { not: product.id } // Traz todos menos o atual
+      },
+      select: { id: true, title: true }
+    });
+    availableFlavors = extraFlavorsQuery.map(f => ({ id: f.id, name: f.title }));
+  }
+
   // 2. Monta o objeto no formato que o componente ProductDetails espera
   const productData = {
     id: product.id,
@@ -33,6 +47,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
       name: addon.name,
       price: Number(addon.price)
     })),
+    availableFlavors // Passando os sabores para o client component
   };
 
   return (
@@ -61,7 +76,6 @@ export default async function ProductPage({ params }: ProductPageProps) {
           </div>
 
           <div className="mt-4 border-t border-border pt-6">
-            {/* Aqui entra aquele componente que fizemos no Lote 1 */}
             <ProductDetails product={productData} />
           </div>
         </div>

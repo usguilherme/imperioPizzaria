@@ -165,32 +165,52 @@ export function PizzaBuilderModal({
 
           {isPizza && (
             <section className={!selectedSize ? "opacity-40 pointer-events-none" : ""}>
-              <h3 className="mb-3 font-semibold text-foreground">2. Escolha os Sabores</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {availableFlavors.map((flavor) => {
-                  const isSelected = selectedFlavors.some((f) => f.id === flavor.id);
-                  const promoPrice = selectedSize ? getPromoForFlavor(flavor.id, selectedSize.id) : undefined;
+              <h3 className="mb-3 font-semibold text-foreground">2. Escolha os Sabores Extras (Até {selectedSize?.maxFlavors ?? 2})</h3>
+              
+              {availableFlavors.length === 0 ? (
+                <div className="p-4 text-sm text-center text-foreground-muted border border-border rounded-xl">
+                  Nenhum sabor adicional disponível no momento.
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {availableFlavors.map((flavor) => {
+                    const isSelected = selectedFlavors.some((f) => f.id === flavor.id);
+                    const promoPrice = selectedSize ? getPromoForFlavor(flavor.id, selectedSize.id) : undefined;
+                    const finalPrice = promoPrice !== undefined ? promoPrice : flavor.price;
 
-                  return (
-                    <button 
-                      key={flavor.id} 
-                      onClick={() => toggleFlavor(flavor)} 
-                      className={`flex items-center gap-3 p-2 rounded-xl border text-left ${isSelected ? "border-primary bg-primary/5" : "border-border"}`}
-                    >
-                      <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded"><Image src={flavor.imageUrl} alt={flavor.title} fill className="object-cover" /></div>
-                      <div className="flex-1 flex flex-col">
-                        <span className="text-sm text-foreground line-clamp-1">{flavor.title}</span>
-                        {promoPrice !== undefined && (
-                          <span className="text-[10px] text-primary font-semibold w-fit">
-                            🔥 Promocional: {formatCurrency(promoPrice)}
-                          </span>
-                        )}
-                      </div>
-                      {isSelected && <Check size={16} className="text-primary shrink-0" />}
-                    </button>
-                  );
-                })}
-              </div>
+                    return (
+                      <button 
+                        key={flavor.id} 
+                        onClick={() => toggleFlavor(flavor)} 
+                        className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all ${
+                          isSelected ? "border-primary bg-primary/10" : "border-border hover:border-primary/50"
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-md border border-border/50">
+                            <Image src={flavor.imageUrl} alt={flavor.title} fill className="object-cover" />
+                          </div>
+                          <div className="flex flex-col text-left">
+                            <span className="text-sm font-medium text-foreground">{flavor.title}</span>
+                            {promoPrice !== undefined && (
+                              <span className="text-[10px] font-bold text-primary uppercase">🔥 Promocional</span>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-4">
+                          <span className="font-bold text-primary">+ {formatCurrency(finalPrice)}</span>
+                          <div className={`flex h-5 w-5 items-center justify-center rounded border transition-colors ${
+                            isSelected ? "bg-primary border-primary text-white" : "border-foreground-muted bg-transparent"
+                          }`}>
+                            {isSelected && <Check size={14} />}
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </section>
           )}
 

@@ -22,7 +22,7 @@ export interface CartItem {
   // Dados específicos para Pizzas
   sizeId?: string;
   sizeName?: string;
-  flavors?: CartFlavor[];
+  flavors?: CartFlavor[]; // Já suporta N sabores!
 
   // A CORREÇÃO FOI AQUI: Adicionando as bordas para não se perderem mais!
   crustId?: string | null;

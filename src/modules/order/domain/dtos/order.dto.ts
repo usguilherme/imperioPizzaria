@@ -7,6 +7,7 @@ export interface PizzaSelectionInput {
   sizeId: string;
   flavorOneId: string;
   flavorTwoId?: string | null;
+  flavorThreeId?: string | null; // AQUI ESTÁ A CORREÇÃO!
   crustId?: string | null;
 }
 

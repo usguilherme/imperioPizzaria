@@ -101,10 +101,10 @@ model Product {
   orderItems       OrderItem[]
   flavorOne        PizzaFlavorCombination[] @relation("FlavorOne")
   flavorTwo        PizzaFlavorCombination[] @relation("FlavorTwo")
+  flavorThree      PizzaFlavorCombination[] @relation("FlavorThree") // NOVO: 3º Sabor
   availableSizes   PizzaSize[] @relation("ProductSizes")
   availableCrusts  PizzaCrust[] @relation("ProductCrusts")
 
-  // NOVO: promoções deste sabor por tamanho específico
   sizePromos       PizzaFlavorSizePromo[]
 
   createdAt        DateTime    @default(now())
@@ -139,7 +139,6 @@ model PizzaSize {
   products          Product[] @relation("ProductSizes")
   crusts            PizzaCrust[]
 
-  // NOVO: promoções de sabores atreladas a este tamanho
   flavorSizePromos  PizzaFlavorSizePromo[]
 
   createdAt   DateTime @default(now())
@@ -171,13 +170,9 @@ model PizzaCrust {
 }
 
 // ==========================================
-// PROMOÇÃO DE SABOR POR TAMANHO (NOVO)
+// PROMOÇÃO DE SABOR POR TAMANHO
 // ==========================================
 
-// Liga um Product (sabor) a um PizzaSize específico com um preço
-// promocional. A existência de uma linha aqui só é aplicada se o
-// Product também tiver isPromoActive = true (reaproveita o campo
-// que já existe, evitando duplicar o estado "promoção ligada/desligada").
 model PizzaFlavorSizePromo {
   id          String    @id @default(cuid())
 
@@ -192,14 +187,13 @@ model PizzaFlavorSizePromo {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  // Um sabor só pode ter UMA promoção por tamanho
   @@unique([productId, sizeId])
   @@index([sizeId])
   @@map("pizza_flavor_size_promos")
 }
 
 // ==========================================
-// LÓGICA DE PIZZA 2 SABORES, TAMANHOS E BORDAS
+// LÓGICA DE PIZZA 2 E 3 SABORES, TAMANHOS E BORDAS
 // ==========================================
 
 model PizzaFlavorCombination {
@@ -216,6 +210,10 @@ model PizzaFlavorCombination {
 
   flavorTwoId String?
   flavorTwo   Product?  @relation("FlavorTwo", fields: [flavorTwoId], references: [id])
+
+  // NOVO: Adicionado campo para o terceiro sabor
+  flavorThreeId String?
+  flavorThree   Product?  @relation("FlavorThree", fields: [flavorThreeId], references: [id])
 
   crustId     String?
   crust       PizzaCrust? @relation(fields: [crustId], references: [id])

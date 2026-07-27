@@ -30,6 +30,7 @@ export async function createOrderUseCase(
       sizeId: string;
       flavorOneId: string;
       flavorTwoId?: string | null;
+      flavorThreeId?: string | null; // NOVO
       crustId?: string | null;
     } | null = null;
 
@@ -52,13 +53,17 @@ export async function createOrderUseCase(
         }
       }
 
+      // NOVO: Validação do 3º sabor
+      if (item.pizza.flavorThreeId) {
+        const flavorThree = await prisma.product.findUnique({ where: { id: item.pizza.flavorThreeId } });
+        if (!flavorThree || !flavorThree.isFlavorEligible) {
+          return { success: false, error: "Sabor 3 inválido ou não elegível para divisão" };
+        }
+      }
+
       // Preço base = preço do TAMANHO escolhido (fixo, compartilhado entre produtos)
       unitPrice = Number(size.price);
 
-      // 🆕 PROMOÇÃO DE SABOR POR TAMANHO
-      // Só se aplica em pizza de sabor único (sem flavorTwo) e com o
-      // campo isPromoActive do Product ligado. Isso reaproveita o
-      // checkbox "Promoção ativa" já existente como gate da promoção.
       if (!item.pizza.flavorTwoId && flavorOne.isPromoActive) {
         const sizePromo = await prisma.pizzaFlavorSizePromo.findUnique({
           where: {
@@ -86,6 +91,7 @@ export async function createOrderUseCase(
         sizeId: item.pizza.sizeId,
         flavorOneId: item.pizza.flavorOneId,
         flavorTwoId: item.pizza.flavorTwoId ?? null,
+        flavorThreeId: item.pizza.flavorThreeId ?? null, // NOVO
         crustId: item.pizza.crustId ?? null,
       };
     } else {
